@@ -1,0 +1,9 @@
+# Security Policy
+Expires: 2025-12-31T23:59:59.000Z
+Contact: mailto:security@example.com
+Preferred-Languages: en
+# If you have a security issue reporting page
+# Policy: https://example.com/security-policy
+# If you offer a bug bounty program
+# Acknowledgments: https://example.com/hall-of-fame
+# Please replace example.com with your actual domain 

@@ -123,6 +123,25 @@ The PDF generation is handled in `src/hooks/useDocumentActions.ts`. You can cust
 
 The prompts used for generating content are in `src/actions/index.ts`. You can modify these to change how the AI generates your resume and cover letter.
 
+## Security Features
+
+The application includes several security measures to protect against bots, scrapers, and potential attackers:
+
+- **Rate Limiting**: Prevents abuse by limiting request frequency from individual IPs
+- **Bot Detection**: Identifies and blocks suspicious automation tools and bots
+- **Input Sanitization**: Protects against XSS and injection attacks
+- **Security Headers**: Implements HTTP security headers including Content-Security-Policy
+- **Robots.txt**: Controls search engine and bot access to application routes
+- **API Protection**: Extra safeguards for API endpoints that handle sensitive operations
+
+### Customizing Security Settings
+
+Security configurations can be adjusted in the following files:
+- `src/middleware.ts` - Modify rate limits and bot detection
+- `public/robots.txt` - Update crawler access rules
+- `next.config.mjs` - Adjust security headers
+- `src/lib/security.ts` - Enhance input sanitization logic
+
 ## Troubleshooting
 
 ### PDF Generation Issues
