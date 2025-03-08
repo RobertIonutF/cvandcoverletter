@@ -111,16 +111,17 @@ export function CoverLetterDisplay({
               <TooltipTrigger asChild>
                 <Button 
                   variant="outline" 
-                  size="icon" 
-                  className="h-8 w-8"
+                  size="sm"
+                  className="h-8 gap-1"
                   onClick={handleDownloadCoverLetter}
                   disabled={!hasContent && !formattedContent}
                 >
                   <Download className="h-4 w-4" />
+                  DOCX
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Download Cover Letter</p>
+                <p>Download as Word Document (.docx)</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

@@ -86,16 +86,17 @@ export function ResumeDisplay({
               <TooltipTrigger asChild>
                 <Button 
                   variant="outline" 
-                  size="icon" 
-                  className="h-8 w-8"
+                  size="sm"
+                  className="h-8 gap-1"
                   onClick={handleDownloadCV}
                   disabled={!generatedCV}
                 >
                   <Download className="h-4 w-4" />
+                  DOCX
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Download Resume</p>
+                <p>Download as Word Document (.docx)</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
