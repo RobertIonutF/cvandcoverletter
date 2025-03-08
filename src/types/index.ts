@@ -54,7 +54,7 @@ export type SkillCategory = z.infer<typeof skillCategorySchema>
 
 // Job Description Schema
 export const jobDescriptionSchema = z.object({
-  content: z.string().min(100, { message: 'Job description should be at least 100 characters' })
+  content: z.string().min(150, { message: 'Job description should be at least 150 characters' })
 })
 
 export type JobDescription = z.infer<typeof jobDescriptionSchema>

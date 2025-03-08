@@ -10,6 +10,9 @@ import {
   GeneratedCoverLetter
 } from '@/types'
 
+// Supported languages
+export type Language = 'english' | 'french' | 'spanish' | 'german' | 'romanian' | 'russian' | 'chinese' | 'japanese'
+
 interface CVStoreState {
   // User data
   userDetails: UserDetails | null
@@ -29,6 +32,9 @@ interface CVStoreState {
   keywordsMatched: string[]
   matchScore: number
   analysisComplete: boolean
+  
+  // Language preference
+  language: Language
   
   // Actions
   setUserDetails: (details: UserDetails) => void
@@ -51,6 +57,7 @@ interface CVStoreState {
   setKeywordsMatched: (keywords: string[]) => void
   setMatchScore: (score: number) => void
   setAnalysisComplete: (complete: boolean) => void
+  setLanguage: (language: Language) => void
   resetGeneratedContent: () => void
 }
 
@@ -69,6 +76,7 @@ export const useCVStore = create<CVStoreState>()(
       keywordsMatched: [],
       matchScore: 0,
       analysisComplete: false,
+      language: 'english',
       
       // Actions
       setUserDetails: (details) => set({ userDetails: details }),
@@ -154,6 +162,8 @@ export const useCVStore = create<CVStoreState>()(
       setMatchScore: (score) => set({ matchScore: score }),
       
       setAnalysisComplete: (complete) => set({ analysisComplete: complete }),
+      
+      setLanguage: (language) => set({ language }),
       
       resetGeneratedContent: () => set({ 
         generatedCV: null, 

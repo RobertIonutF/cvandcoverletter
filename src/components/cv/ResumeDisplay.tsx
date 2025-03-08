@@ -1,9 +1,33 @@
-import { Button } from '@/components/ui/button'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { useCVStore } from '@/store'
-import { Loader2, FileText, Sparkles, Copy, Download, RefreshCw } from 'lucide-react'
-import { toast } from 'sonner'
 import React from 'react'
+import { useCVStore } from '@/store'
+import { Button } from '@/components/ui/button'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Badge } from '@/components/ui/badge'
+import { Sparkles, Loader2, Copy, Download, RefreshCw, FileText } from 'lucide-react'
+
+// Language display names and their flags
+const languageFlags: Record<string, string> = {
+  english: '🇺🇸',
+  french: '🇫🇷',
+  spanish: '🇪🇸',
+  german: '🇩🇪',
+  romanian: '🇷🇴',
+  russian: '🇷🇺',
+  chinese: '🇨🇳',
+  japanese: '🇯🇵'
+}
+
+// Language display names
+const languageNames: Record<string, string> = {
+  english: 'English',
+  french: 'French',
+  spanish: 'Spanish',
+  german: 'German',
+  romanian: 'Romanian',
+  russian: 'Russian',
+  chinese: 'Chinese',
+  japanese: 'Japanese'
+}
 
 interface ResumeDisplayProps {
   isGenerating: boolean
@@ -22,8 +46,12 @@ export function ResumeDisplay({
   cvContentRef,
   resetGeneratedContent
 }: ResumeDisplayProps) {
-  const { userDetails, generatedCV } = useCVStore()
-  const isValid = !!userDetails
+  const { userDetails, generatedCV, language } = useCVStore()
+  
+  const isValid = !!userDetails && Object.keys(userDetails).length > 0
+  
+  const languageFlag = languageFlags[language] || '🌐'
+  const languageName = languageNames[language] || language
 
   if (isGenerating) {
     return (
@@ -56,100 +84,93 @@ export function ResumeDisplay({
         <Button 
           onClick={handleGenerateCV} 
           className="gap-2 px-6"
-          disabled={!isValid || !userDetails}
+          disabled={!isValid || isGenerating}
         >
-          <Sparkles className="h-4 w-4" />
-          Generate Resume
+          {isGenerating ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <Sparkles className="h-4 w-4" />
+              Generate Resume
+            </>
+          )}
         </Button>
       </div>
     )
   }
 
-  // At this point, generatedCV is guaranteed to exist
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between space-x-2 px-4">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="gap-1"
-          onClick={handleGenerateCV}
-          disabled={isGenerating || !isValid}
-        >
-          <RefreshCw className="h-4 w-4" />
-          Regenerate
-        </Button>
+    <div className="h-full flex flex-col">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold">Your Resume</h2>
+          <Badge 
+            variant="outline" 
+            className="gap-1 text-xs font-normal bg-slate-50 dark:bg-slate-900"
+          >
+            <span>{languageFlag}</span>
+            <span>{languageName}</span>
+          </Badge>
+        </div>
         
-        <div className="flex space-x-2">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="h-8 gap-1"
-                  onClick={handleDownloadCV}
-                  disabled={!generatedCV}
-                >
-                  <Download className="h-4 w-4" />
-                  DOCX
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Download as Word Document (.docx)</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  id="copy-cv-btn" 
-                  size="icon" 
-                  className="h-8 w-8" 
-                  onClick={handleCopyCV}
-                  disabled={!generatedCV}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Copy to Clipboard</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="destructive" 
-                  size="icon" 
-                  className="h-8 w-8"
-                  onClick={() => {
-                    resetGeneratedContent()
-                    toast.success("Content reset. Try generating again.")
-                  }}
-                >
-                  <span className="sr-only">Reset</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
-                    <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-                    <path d="M3 3v5h5"></path>
-                    <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
-                    <path d="M16 21h5v-5"></path>
-                  </svg>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Reset Content</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+        <div className="flex items-center gap-2">
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="gap-1" 
+            onClick={handleCopyCV}
+          >
+            <Copy className="h-3.5 w-3.5" />
+            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Copy</span>
+          </Button>
+          
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="gap-1" 
+            onClick={handleDownloadCV}
+          >
+            <Download className="h-3.5 w-3.5" />
+            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Download</span>
+          </Button>
+          
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="gap-1" 
+            onClick={resetGeneratedContent}
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Reset</span>
+          </Button>
+          
+          <Button 
+            size="sm" 
+            variant="default" 
+            className="gap-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700" 
+            onClick={handleGenerateCV}
+            disabled={isGenerating}
+          >
+            {isGenerating ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <span className="whitespace-nowrap">Generating...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-3.5 w-3.5" />
+                <span className="whitespace-nowrap">Regenerate</span>
+              </>
+            )}
+          </Button>
         </div>
       </div>
       
       {/* Display wrapper with theme support */}
-      <div className="mx-auto max-w-4xl rounded-md border shadow-md overflow-hidden">
+      <div className="mx-auto w-full rounded-md border shadow-md overflow-hidden flex-1">
         {/* PDF optimized content (hidden in UI but used for downloads/printing) */}
         <div className="hidden">
           <div 
@@ -267,109 +288,116 @@ export function ResumeDisplay({
         </div>
         
         {/* Visible content with theme support */}
-        <div 
-          ref={cvContentRef} 
-          className="p-8 space-y-5 bg-white dark:bg-slate-900 text-black dark:text-white font-sans ats-friendly-cv"
-        >
-          {generatedCV.content ? (
-            <div className="whitespace-pre-wrap text-sm leading-relaxed font-sans prose prose-sm dark:prose-invert max-w-none">
-              {generatedCV.content}
-            </div>
-          ) : generatedCV.sections ? (
-            <div className="cv-content">
-              {/* Header with user details */}
-              <header className="mb-6 text-center">
-                <h1 className="text-2xl font-bold mb-2">{userDetails?.fullName}</h1>
-                <div className="contact-info flex flex-wrap justify-center gap-3 text-sm">
-                  {userDetails?.email && <span>{userDetails.email}</span>}
-                  {userDetails?.phone && <span>• {userDetails.phone}</span>}
-                  {userDetails?.location && <span>• {userDetails.location}</span>}
-                  {userDetails?.linkedin && <span>• {userDetails.linkedin}</span>}
-                  {userDetails?.website && <span>• {userDetails.website}</span>}
-                </div>
-              </header>
-
-              {/* Summary Section */}
-              {generatedCV.sections?.summary && (
-                <section className="mb-5">
-                  <h2 className="text-lg font-bold mb-2 pb-1 border-b border-gray-200 dark:border-gray-700">SUMMARY</h2>
-                  <p className="text-sm leading-relaxed">{generatedCV.sections.summary}</p>
-                </section>
-              )}
-
-              {/* Experience Section */}
-              {generatedCV.sections?.experience && generatedCV.sections.experience.length > 0 && (
-                <section className="mb-5">
-                  <h2 className="text-lg font-bold mb-2 pb-1 border-b border-gray-200 dark:border-gray-700">EXPERIENCE</h2>
-                  <div className="space-y-4">
-                    {generatedCV.sections.experience.map((exp, index) => (
-                      <div key={index} className="experience-item">
-                        <div className="flex justify-between items-start mb-1">
-                          <h3 className="text-base font-semibold">{exp.title}</h3>
-                          <span className="text-sm text-gray-600 dark:text-gray-400">{exp.period}</span>
-                        </div>
-                        <p className="text-sm font-medium mb-1">{exp.company}</p>
-                        <p className="text-sm whitespace-pre-line leading-relaxed">{exp.description}</p>
-                      </div>
-                    ))}
+        <ScrollArea className="h-full">
+          <div 
+            ref={cvContentRef} 
+            className="p-8 bg-white dark:bg-slate-900 text-black dark:text-white"
+          >
+            {generatedCV.content ? (
+              <div className="whitespace-pre-wrap text-sm leading-relaxed font-sans prose prose-sm dark:prose-invert max-w-none">
+                {generatedCV.content}
+              </div>
+            ) : generatedCV.sections ? (
+              <div className="cv-content">
+                {/* Header with user details */}
+                <header className="mb-6 text-center">
+                  <h1 className="text-2xl font-bold mb-2">{userDetails?.fullName}</h1>
+                  <div className="contact-info flex flex-wrap justify-center gap-3 text-sm">
+                    {userDetails?.email && <span>{userDetails.email}</span>}
+                    {userDetails?.phone && <span>• {userDetails.phone}</span>}
+                    {userDetails?.location && <span>• {userDetails.location}</span>}
+                    {userDetails?.linkedin && <span>• {userDetails.linkedin}</span>}
+                    {userDetails?.website && <span>• {userDetails.website}</span>}
                   </div>
-                </section>
-              )}
+                </header>
 
-              {/* Education Section */}
-              {generatedCV.sections?.education && generatedCV.sections.education.length > 0 && (
-                <section className="mb-5">
-                  <h2 className="text-lg font-bold mb-2 pb-1 border-b border-gray-200 dark:border-gray-700">EDUCATION</h2>
-                  <div className="space-y-3">
-                    {generatedCV.sections.education.map((edu, index) => (
-                      <div key={index} className="education-item">
-                        <div className="flex justify-between items-start mb-1">
-                          <h3 className="text-base font-semibold">{edu.degree}</h3>
-                          <span className="text-sm text-gray-600 dark:text-gray-400">{edu.period}</span>
-                        </div>
-                        <p className="text-sm">{edu.institution}</p>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              )}
+                {/* Summary Section */}
+                {generatedCV.sections?.summary && (
+                  <section className="mb-5">
+                    <h2 className="text-lg font-bold mb-2 pb-1 border-b border-gray-200 dark:border-gray-700">SUMMARY</h2>
+                    <p className="text-sm leading-relaxed">{generatedCV.sections.summary}</p>
+                  </section>
+                )}
 
-              {/* Skills Section */}
-              {generatedCV.sections?.skills && generatedCV.sections.skills.length > 0 && (
-                <section className="mb-5">
-                  <h2 className="text-lg font-bold mb-2 pb-1 border-b border-gray-200 dark:border-gray-700">SKILLS</h2>
-                  <div className="flex flex-wrap gap-2">
-                    {generatedCV.sections.skills.map((skill, index) => (
-                      <span key={index} className="skill-tag text-sm py-1 px-3 bg-blue-50 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-md font-medium">{skill}</span>
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {/* Projects Section */}
-              {generatedCV.sections?.projects && generatedCV.sections.projects.length > 0 && (
-                <section className="mb-5">
-                  <h2 className="text-lg font-bold mb-2 pb-1 border-b border-gray-200 dark:border-gray-700">PROJECTS</h2>
-                  <div className="space-y-4">
-                    {generatedCV.sections.projects.map((project, index) => (
-                      <div key={index} className="project-item bg-gray-50 dark:bg-gray-800/50 p-3 rounded-md">
-                        <h3 className="text-base font-semibold mb-2">{project.name}</h3>
-                        <p className="text-sm whitespace-pre-line leading-relaxed mb-2">{project.description}</p>
-                        {project.technologies && project.technologies.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {project.technologies.map((tech, techIndex) => (
-                              <span key={techIndex} className="text-xs py-0.5 px-2 bg-gray-200 dark:bg-gray-700 rounded-full">{tech}</span>
-                            ))}
+                {/* Experience Section */}
+                {generatedCV.sections?.experience && generatedCV.sections.experience.length > 0 && (
+                  <section className="mb-5">
+                    <h2 className="text-lg font-bold mb-2 pb-1 border-b border-gray-200 dark:border-gray-700">EXPERIENCE</h2>
+                    <div className="space-y-4">
+                      {generatedCV.sections.experience.map((exp, index) => (
+                        <div key={index} className="experience-item">
+                          <div className="flex justify-between items-start mb-1">
+                            <h3 className="text-base font-semibold">{exp.title}</h3>
+                            <span className="text-sm text-gray-600 dark:text-gray-400">{exp.period}</span>
                           </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              )}
-            </div>
-          ) : null}
-        </div>
+                          <p className="text-sm font-medium mb-1">{exp.company}</p>
+                          <p className="text-sm whitespace-pre-line leading-relaxed">{exp.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {/* Education Section */}
+                {generatedCV.sections?.education && generatedCV.sections.education.length > 0 && (
+                  <section className="mb-5">
+                    <h2 className="text-lg font-bold mb-2 pb-1 border-b border-gray-200 dark:border-gray-700">EDUCATION</h2>
+                    <div className="space-y-3">
+                      {generatedCV.sections.education.map((edu, index) => (
+                        <div key={index} className="education-item">
+                          <div className="flex justify-between items-start mb-1">
+                            <h3 className="text-base font-semibold">{edu.degree}</h3>
+                            <span className="text-sm text-gray-600 dark:text-gray-400">{edu.period}</span>
+                          </div>
+                          <p className="text-sm">{edu.institution}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {/* Skills Section */}
+                {generatedCV.sections?.skills && generatedCV.sections.skills.length > 0 && (
+                  <section className="mb-5">
+                    <h2 className="text-lg font-bold mb-2 pb-1 border-b border-gray-200 dark:border-gray-700">SKILLS</h2>
+                    <div className="flex flex-wrap gap-2">
+                      {generatedCV.sections.skills.map((skill, index) => (
+                        <span key={index} className="skill-tag text-sm py-1 px-3 bg-blue-50 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-md font-medium">{skill}</span>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
+                {/* Projects Section */}
+                {generatedCV.sections?.projects && generatedCV.sections.projects.length > 0 && (
+                  <section className="mb-5">
+                    <h2 className="text-lg font-bold mb-2 pb-1 border-b border-gray-200 dark:border-gray-700">PROJECTS</h2>
+                    <div className="space-y-4">
+                      {generatedCV.sections.projects.map((project, index) => (
+                        <div key={index} className="project-item bg-gray-50 dark:bg-gray-800/50 p-3 rounded-md">
+                          <h3 className="text-base font-semibold mb-2">{project.name}</h3>
+                          <p className="text-sm whitespace-pre-line leading-relaxed mb-2">{project.description}</p>
+                          {project.technologies && project.technologies.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {project.technologies.map((tech, techIndex) => (
+                                <span key={techIndex} className="text-xs py-0.5 px-2 bg-gray-200 dark:bg-gray-700 rounded-full">{tech}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-48 text-center text-muted-foreground">
+                <FileText className="h-8 w-8 mb-2" />
+                <p>The resume content appears to be empty. Please try regenerating it.</p>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
       </div>
     </div>
   )

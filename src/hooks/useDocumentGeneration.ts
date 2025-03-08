@@ -24,9 +24,25 @@ export function useDocumentGeneration() {
     educations,
     skillCategories,
     projects,
+    language,
     setGeneratedCV,
     setGeneratedCoverLetter,
   } = useCVStore()
+
+  // Get language display name for notifications
+  const getLanguageDisplayName = (lang: string) => {
+    const languageMap: Record<string, string> = {
+      english: 'English',
+      french: 'French',
+      spanish: 'Spanish',
+      german: 'German',
+      romanian: 'Romanian',
+      russian: 'Russian',
+      chinese: 'Chinese',
+      japanese: 'Japanese'
+    }
+    return languageMap[lang] || lang
+  }
 
   const handleGenerateCV = async () => {
     if (!jobDescription || !userDetails) {
@@ -37,17 +53,20 @@ export function useDocumentGeneration() {
     setIsGenerating(true)
     
     try {
+      toast.info(`Generating resume in ${getLanguageDisplayName(language)}...`)
+      
       const cv = await generateCV(
         jobDescription,
         userDetails,
         experiences,
         educations,
         skillCategories,
-        projects
+        projects,
+        language
       )
       
       setGeneratedCV(cv)
-      toast.success('Resume generated successfully')
+      toast.success(`Resume generated successfully in ${getLanguageDisplayName(language)}`)
       return cv
     } catch (error) {
       console.error('Error generating CV:', error)
@@ -67,17 +86,20 @@ export function useDocumentGeneration() {
     setIsGeneratingCoverLetter(true)
     
     try {
+      toast.info(`Generating cover letter in ${getLanguageDisplayName(language)}...`)
+      
       const coverLetter = await generateCoverLetter(
         jobDescription,
         userDetails,
         experiences,
         educations,
         skillCategories,
-        projects
+        projects,
+        language
       )
       
       setGeneratedCoverLetter(coverLetter)
-      toast.success('Cover letter generated successfully')
+      toast.success(`Cover letter generated successfully in ${getLanguageDisplayName(language)}`)
       return coverLetter
     } catch (error) {
       console.error('Error generating cover letter:', error)
@@ -122,7 +144,7 @@ export function useDocumentGeneration() {
         // Then generate cover letter
         await handleGenerateCoverLetter()
         
-        toast.success('Documents generated successfully')
+        toast.success(`Documents generated successfully in ${getLanguageDisplayName(language)}`)
       } catch (error) {
         console.error('Error during document generation:', error)
       }

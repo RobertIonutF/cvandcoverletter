@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useCVStore } from '@/store'
 import { 
@@ -7,321 +7,84 @@ import {
   TextRun, 
   HeadingLevel, 
   AlignmentType, 
-  BorderStyle, 
-  ExternalHyperlink, 
   Packer
 } from 'docx'
+import { generateCV, generateCoverLetter } from '@/actions'
+import { GeneratedCV, GeneratedCoverLetter } from '@/types'
 
-interface PDFOptions {
-  margin: number[]
-  filename: string
-  image: { type: string; quality: number }
-  html2canvas: { 
-    scale: number
-    useCORS: boolean
-    letterRendering: boolean
-    logging: boolean
-  }
-  jsPDF: { 
-    unit: string
-    format: string
-    orientation: string
-    compress: boolean
-    precision: number
-  }
-  pagebreak?: { mode: string[], before?: string[] }
-  maxPages?: number
-}
-
-// Define a type for the html2pdf module instance
-type Html2PdfInstance = {
-  from: (element: HTMLElement) => Html2PdfInstance
-  set: (options: PDFOptions) => Html2PdfInstance
-  save: () => Promise<void>
-  toPdf: () => unknown
-}
-
-// Define a type for the html2pdf module factory function
-type Html2PdfFactory = () => Html2PdfInstance
-
-export function useDocumentActions() {
+export default function useDocumentActions() {
+  // State for download operations
+  const [isPending, setIsPending] = useState(false)
+  const [downloadFormat, setDownloadFormat] = useState<'docx' | 'txt'>('docx')
+  
   const cvContentRef = useRef<HTMLDivElement>(null)
   const coverLetterContentRef = useRef<HTMLDivElement>(null)
-  const [html2pdfModule, setHtml2pdfModule] = useState<Html2PdfFactory | null>(null)
   
   const { 
     generatedCV, 
     generatedCoverLetter,
     resetGeneratedContent,
     userDetails,
+    projects,
+    jobDescription,
     experiences,
     educations,
-    skillCategories,
-    projects
+    skillCategories
   } = useCVStore()
   
-  // Only load html2pdf on the client side
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      // Dynamically import html2pdf only on client side
-      import('html2pdf.js')
-        .then(module => {
-          setHtml2pdfModule(() => module.default as Html2PdfFactory)
-        })
-        .catch(err => {
-          console.error('Failed to load html2pdf:', err)
-        })
-    }
-  }, [])
-  
-  // Helper to download content as a PDF file
-  const downloadAsPDF = async (elementId: string, filename: string, maxPages: number | null = null) => {
-    // Make sure we're on the client side
+  // Tracking downloads for analytics
+  const trackDownload = (documentType: string, format: string) => {
+    // Implement tracking logic here if needed
+    console.log(`Downloaded ${documentType} as ${format}`)
+  }
+
+  // Helper function to download CV as Word
+  const downloadAsWord = async (filename: string, cvContent: GeneratedCV | null = null) => {
     if (typeof window === 'undefined') {
       return false
     }
     
-    // Check if html2pdf is loaded
-    if (!html2pdfModule) {
-      toast.error('PDF generation library not available')
-      return false
-    }
+    // Use provided content if available, otherwise use from store
+    const cv = cvContent || generatedCV
     
-    const element = document.getElementById(elementId)
-    if (!element) {
-      toast.error('Could not find the content to download')
-      return false
-    }
-
-    // Show loading toast
-    const loadingToast = toast.loading('Generating PDF...')
-
-    try {
-      // Create a clean wrapper div
-      const wrapper = document.createElement('div')
-      wrapper.style.width = '8.5in'
-      wrapper.style.margin = '0'
-      wrapper.style.padding = '0'
-      wrapper.style.position = 'absolute'
-      wrapper.style.left = '-9999px'
-      wrapper.style.top = '0'
-      
-      // Clone the content
-      const content = element.cloneNode(true) as HTMLElement
-      
-      // Reset any transforms or scaling that might affect page breaks
-      content.style.transform = 'none'
-      content.style.transformOrigin = '0 0'
-      content.style.width = '8.5in'
-      content.style.margin = '0'
-      content.style.padding = '0.2in'
-      content.style.boxSizing = 'border-box'
-      
-      // Append content to wrapper
-      wrapper.appendChild(content)
-      
-      // Add wrapper to document
-      document.body.appendChild(wrapper)
-      
-      // Add styling
-      const styleElement = document.createElement('style')
-      styleElement.textContent = `
-        body {
-          margin: 0;
-          padding: 0;
-        }
-        @page {
-          size: letter;
-          margin: 0;
-        }
-        * {
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
-        #${elementId} {
-          break-inside: avoid;
-          page-break-inside: avoid;
-        }
-        body, p, div, h1, h2, h3, span, li {
-          color: black !important;
-          background: white !important;
-          line-height: 1.2 !important;
-          font-family: 'Calibri', 'Segoe UI', Arial, sans-serif !important;
-        }
-        p, div, span, li { 
-          font-size: 9pt !important; 
-          margin-bottom: 0.05in !important;
-        }
-        h1 { 
-          font-size: 14pt !important; 
-          font-weight: bold !important; 
-          margin: 0 0 0.1in 0 !important;
-        }
-        h2 { 
-          font-size: 11pt !important; 
-          font-weight: bold !important; 
-          margin: 0.05in 0 !important;
-          padding-bottom: 0.03in !important;
-          text-transform: uppercase !important;
-        }
-        h3 { 
-          font-size: 10pt !important; 
-          font-weight: bold !important; 
-          margin: 0 !important;
-        }
-        section {
-          margin-bottom: 0.1in !important;
-          break-inside: avoid !important;
-          page-break-inside: avoid !important;
-        }
-        header {
-          margin-bottom: 0.08in !important;
-          break-inside: avoid !important;
-          page-break-inside: avoid !important;
-        }
-        .contact-info {
-          display: flex !important;
-          flex-wrap: wrap !important;
-          justify-content: center !important;
-          gap: 4px !important;
-          font-size: 8pt !important;
-        }
-        .experience-item, .education-item {
-          margin-bottom: 0.08in !important;
-          break-inside: avoid !important;
-          page-break-inside: avoid !important;
-        }
-        .skill-tag {
-          color: #1a56db !important;
-          background-color: #e1effe !important;
-          border: 1px solid #93c5fd !important;
-          padding: 1px 4px !important;
-          border-radius: 3px !important;
-          display: inline-block !important;
-          margin: 1px !important;
-          font-size: 8pt !important;
-        }
-        .project-item {
-          border: 1px solid #e5e7eb !important;
-          background-color: #f9fafb !important;
-          padding: 4px !important;
-          margin-bottom: 4px !important;
-          break-inside: avoid !important;
-          page-break-inside: avoid !important;
-        }
-        a {
-          color: #1a56db !important;
-          text-decoration: none !important;
-        }
-        ul, ol {
-          margin: 0.03in 0 !important;
-          padding-left: 0.15in !important;
-        }
-        li {
-          margin-bottom: 0.02in !important;
-        }
-      `
-      wrapper.appendChild(styleElement)
-      
-      // Configure html2pdf options with single page layout
-      const opt: PDFOptions = {
-        filename: filename,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { 
-          scale: 2,
-          useCORS: true,
-          letterRendering: true,
-          logging: false
-        },
-        jsPDF: { 
-          unit: 'in',
-          format: 'letter', 
-          orientation: 'portrait',
-          compress: true,
-          precision: 4
-        },
-        // Ensure single page
-        pagebreak: { mode: ['avoid-all', 'css'] },
-        margin: [0, 0, 0, 0]
-      }
-      
-      // Set max pages to 1 to enforce single page
-      if (maxPages === 1) {
-        opt.maxPages = 1
-      }
-      
-      // Generate and download the PDF
-      await html2pdfModule()
-        .set(opt)
-        .from(content)
-        .save()
-      
-      // Clean up
-      document.body.removeChild(wrapper)
-      toast.dismiss(loadingToast)
-      return true
-      
-    } catch (error) {
-      console.error('Error generating PDF:', error)
-      
-      // Dismiss loading toast and show error
-      toast.dismiss(loadingToast)
-      toast.error('Could not generate PDF. Trying alternate format...')
-      return false
-    }
-  }
-
-  // Helper to download content as a text file (fallback)
-  const downloadTextFile = (content: string, filename: string) => {
-    const element = document.createElement('a')
-    const file = new Blob([content], { type: 'text/plain' })
-    element.href = URL.createObjectURL(file)
-    element.download = filename
-    document.body.appendChild(element)
-    element.click()
-    document.body.removeChild(element)
-    return true
-  }
-
-  // Helper to download content as a Word document
-  const downloadAsWord = async (filename: string) => {
-    if (typeof window === 'undefined') {
-      return false
-    }
-    
-    if (!generatedCV) {
-      toast.error('No resume content to download')
+    if (!cv) {
+      toast.error('No CV content to download')
       return false
     }
 
     try {
-      // Show loading toast
-      const loadingToast = toast.loading('Generating Word document...')
-
+      // Show loading toast for better UX
+      const loadingToast = toast.loading('Creating ATS-friendly document...')
+      
       // Create sections for the document
       const docSections = []
 
-      // Header with name and job title
-      if (userDetails) {
-        docSections.push(
-          new Paragraph({
-            text: userDetails.fullName,
-            heading: HeadingLevel.HEADING_1,
-            alignment: AlignmentType.CENTER,
-          })
-        )
+      // Document title with user name
+      docSections.push(
+        new Paragraph({
+          text: userDetails?.fullName || 'Curriculum Vitae',
+          heading: HeadingLevel.TITLE,
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 120 },
+          thematicBreak: true, // Adds a border below this paragraph
+        })
+      )
 
+      // Add user details at the top if available (ATS-friendly header)
+      if (userDetails) {
+        // Job title if available - clear professional title for ATS
         if (userDetails.jobTitle) {
           docSections.push(
             new Paragraph({
               text: userDetails.jobTitle,
               alignment: AlignmentType.CENTER,
-              spacing: { after: 200 },
+              spacing: { after: 240 },
+              style: 'Subtitle',
             })
           )
         }
 
-        // Contact info in a single line
+        // Contact info (email, phone, location) - critical for ATS
         const contactInfo = []
         if (userDetails.email) contactInfo.push(userDetails.email)
         if (userDetails.phone) contactInfo.push(userDetails.phone)
@@ -331,18 +94,19 @@ export function useDocumentActions() {
           docSections.push(
             new Paragraph({
               alignment: AlignmentType.CENTER,
-              spacing: { after: 200 },
+              spacing: { after: 120 },
               children: contactInfo.map((info, index) => {
                 if (index < contactInfo.length - 1) {
                   return [new TextRun(info), new TextRun(' | ')];
                 }
                 return [new TextRun(info)];
               }).flat(),
+              style: 'ContactInfo',
             })
           )
         }
 
-        // Online profiles
+        // Online profiles as clear text (ATS may not follow hyperlinks)
         const onlineProfiles = []
         if (userDetails.linkedin) onlineProfiles.push({ text: 'LinkedIn', url: userDetails.linkedin })
         if (userDetails.github) onlineProfiles.push({ text: 'GitHub', url: userDetails.github })
@@ -352,576 +116,1238 @@ export function useDocumentActions() {
           docSections.push(
             new Paragraph({
               alignment: AlignmentType.CENTER,
-              spacing: { after: 300 },
+              spacing: { after: 360 },
               children: onlineProfiles.map((profile, index) => {
-                const link = new ExternalHyperlink({
-                  children: [new TextRun({ text: profile.text, style: 'Hyperlink' })],
-                  link: profile.url,
-                });
+                const elements = []
+                elements.push(new TextRun({ text: profile.text, style: 'Hyperlink', color: '0366d6' }))
                 
                 if (index < onlineProfiles.length - 1) {
-                  return [link, new TextRun(' | ')];
+                  elements.push(new TextRun(' | '))
                 }
-                return [link];
+                
+                return elements
               }).flat(),
+              style: 'ContactInfo',
             })
           )
         }
       }
-
-      // Summary
-      if (userDetails?.summary) {
+      
+      // Add CV sections - FULL CONTENT with ATS-friendly and attractive formatting
+      // Summary Section - clear section heading for ATS parsing
+      if (cv.sections?.summary) {
         docSections.push(
           new Paragraph({
             text: 'SUMMARY',
             heading: HeadingLevel.HEADING_2,
-          })
-        )
-
-        docSections.push(
+            style: 'SectionHeading',
+            spacing: { before: 240, after: 120 },
+            border: {
+              bottom: { color: '4472C4', size: 1, space: 1, style: 'single' },
+            },
+          }),
           new Paragraph({
-            text: userDetails.summary,
-            spacing: { after: 200 },
+            text: cv.sections.summary,
+            spacing: { after: 240 },
           })
         )
       }
 
-      // Work Experience
-      if (experiences && experiences.length > 0) {
+      // Experience Section - clearly labeled for ATS systems
+      if (cv.sections?.experience && cv.sections.experience.length > 0) {
         docSections.push(
           new Paragraph({
             text: 'EXPERIENCE',
             heading: HeadingLevel.HEADING_2,
+            style: 'SectionHeading',
+            spacing: { before: 240, after: 120 },
+            border: {
+              bottom: { color: '4472C4', size: 1, space: 1, style: 'single' },
+            },
           })
         )
-
-        experiences.forEach((exp) => {
-          // Job Title and Company
+        
+        cv.sections.experience.forEach(job => {
+          // Job title and company - ATS looks for these first
           docSections.push(
             new Paragraph({
-              spacing: { before: 160 },
+              spacing: { after: 0 },
               children: [
-                new TextRun({
-                  text: `${exp.jobTitle} | `,
-                  bold: true,
-                }),
-                new TextRun({
-                  text: exp.company,
-                  bold: true,
-                }),
+                new TextRun({ text: job.title, bold: true, size: 26 }),
+                new TextRun(' | '),
+                new TextRun({ text: job.company, italics: true }),
               ],
+              style: 'JobTitle',
             })
           )
-
-          // Location and Date
-          const dateRange = exp.current
-            ? `${exp.startDate} - Present`
-            : `${exp.startDate} - ${exp.endDate || ''}`;
-
-          docSections.push(
-            new Paragraph({
-              spacing: { before: 60, after: 120 },
-              children: [
-                new TextRun({
-                  text: `${exp.location} | ${dateRange}`,
-                  italics: true,
-                }),
-              ],
-            })
-          )
-
-          // Description - split by newlines to ensure proper paragraphs
-          const descLines = exp.description.split('\n').filter(line => line.trim().length > 0)
           
-          descLines.forEach(line => {
+          // Period if available - clear dates for ATS parsing
+          if (job.period) {
             docSections.push(
               new Paragraph({
-                text: line,
-                spacing: { after: 100 },
+                text: job.period,
+                spacing: { after: 120 },
+                style: 'DateRange',
               })
             )
-          })
+          }
+          
+          // Description - parsed by ATS for keywords
+          if (job.description) {
+            // Split description by new lines to create proper paragraphs
+            const descriptionLines = job.description.split('\n');
+            descriptionLines.forEach(line => {
+              if (line.trim()) {
+                docSections.push(
+                  new Paragraph({
+                    text: line.trim(),
+                    spacing: { after: 80 },
+                    style: 'BodyText',
+                    bullet: {
+                      level: 0
+                    }
+                  })
+                )
+              }
+            })
+            
+            // Add extra spacing after job
+            docSections.push(
+              new Paragraph({
+                text: '',
+                spacing: { after: 160 },
+              })
+            )
+          }
         })
       }
 
-      // Education
-      if (educations && educations.length > 0) {
+      // Education Section - clearly labeled for ATS
+      if (cv.sections?.education && cv.sections.education.length > 0) {
         docSections.push(
           new Paragraph({
             text: 'EDUCATION',
             heading: HeadingLevel.HEADING_2,
+            style: 'SectionHeading',
+            spacing: { before: 240, after: 120 },
+            border: {
+              bottom: { color: '4472C4', size: 1, space: 1, style: 'single' },
+            },
           })
         )
-
-        educations.forEach((edu) => {
-          // Degree and Institution
+        
+        cv.sections.education.forEach(edu => {
+          // Degree and institution - key information for ATS
           docSections.push(
             new Paragraph({
-              spacing: { before: 160 },
+              spacing: { after: 0 },
               children: [
-                new TextRun({
-                  text: `${edu.degree} | `,
-                  bold: true,
-                }),
-                new TextRun({
-                  text: edu.institution,
-                  bold: true,
-                }),
+                new TextRun({ text: edu.degree || 'Degree', bold: true, size: 26 }),
+                new TextRun(' | '),
+                new TextRun({ text: edu.institution || 'Institution', italics: true }),
               ],
+              style: 'JobTitle',
             })
           )
-
-          // Location and Date
-          const dateRange = edu.current
-            ? `${edu.startDate} - Present`
-            : `${edu.startDate} - ${edu.endDate || ''}`;
-
-          docSections.push(
-            new Paragraph({
-              spacing: { before: 60, after: 120 },
-              children: [
-                new TextRun({
-                  text: `${edu.location} | ${dateRange}`,
-                  italics: true,
-                }),
-              ],
-            })
-          )
-
-          // Description if available
-          if (edu.description) {
+          
+          // Period if available
+          if (edu.period) {
             docSections.push(
               new Paragraph({
-                text: edu.description,
-                spacing: { after: 100 },
+                text: edu.period,
+                spacing: { after: 120 },
+                style: 'DateRange',
               })
             )
           }
+          
+          // Extra spacing between education entries
+          docSections.push(
+            new Paragraph({
+              text: '',
+              spacing: { after: 120 },
+            })
+          )
         })
       }
 
-      // Skills
-      if (skillCategories && skillCategories.length > 0) {
+      // Skills Section - critical for ATS keyword matching
+      if (cv.sections?.skills) {
         docSections.push(
           new Paragraph({
             text: 'SKILLS',
             heading: HeadingLevel.HEADING_2,
+            style: 'SectionHeading',
+            spacing: { before: 240, after: 120 },
+            border: {
+              bottom: { color: '4472C4', size: 1, space: 1, style: 'single' },
+            },
           })
         )
-
-        skillCategories.forEach((category) => {
-          if (category.skills.length === 0) return
-
+        
+        // If skills is a string
+        if (typeof cv.sections.skills === 'string') {
           docSections.push(
             new Paragraph({
-              spacing: { before: 120 },
-              children: [
-                new TextRun({
-                  text: `${category.name}: `,
-                  bold: true,
-                }),
-                new TextRun(category.skills.join(', ')),
-              ],
+              text: cv.sections.skills,
+              spacing: { after: 240 },
+              style: 'BodyText',
             })
           )
-        })
+        } 
+        // If skills is an array - format for readability
+        else if (Array.isArray(cv.sections.skills)) {
+          // Create columns of skills for better layout
+          const chunks = [];
+          const chunkSize = Math.ceil(cv.sections.skills.length / 3); // Display in 3 columns
+          
+          for (let i = 0; i < cv.sections.skills.length; i += chunkSize) {
+            chunks.push(cv.sections.skills.slice(i, i + chunkSize));
+          }
+          
+          chunks.forEach(chunk => {
+            docSections.push(
+              new Paragraph({
+                text: chunk.join(', '),
+                spacing: { after: 120 },
+                style: 'BodyText',
+              })
+            );
+          });
+        }
       }
-
-      // Projects
-      if (projects && projects.length > 0) {
+      
+      // Projects - if present
+      if (cv.sections?.projects && cv.sections.projects.length > 0) {
         docSections.push(
           new Paragraph({
             text: 'PROJECTS',
             heading: HeadingLevel.HEADING_2,
+            style: 'SectionHeading',
+            spacing: { before: 240, after: 120 },
+            border: {
+              bottom: { color: '4472C4', size: 1, space: 1, style: 'single' },
+            },
           })
         )
-
-        projects.forEach((project) => {
-          // Project Name
+        
+        cv.sections.projects.forEach(project => {
+          // Project name
           docSections.push(
             new Paragraph({
-              spacing: { before: 160 },
+              spacing: { after: 0 },
               children: [
-                new TextRun({
-                  text: project.name,
-                  bold: true,
-                }),
+                new TextRun({ text: project.name, bold: true, size: 26 }),
               ],
+              style: 'JobTitle',
             })
           )
-
-          // Description
-          docSections.push(
-            new Paragraph({
-              text: project.description,
-              spacing: { after: 60 },
-            })
-          )
-
-          // Technologies
+          
+          // Project description
+          if (project.description) {
+            docSections.push(
+              new Paragraph({
+                text: project.description,
+                spacing: { after: 80 },
+                style: 'BodyText',
+              })
+            )
+          }
+          
+          // Technologies used
           if (project.technologies && project.technologies.length > 0) {
             docSections.push(
               new Paragraph({
-                spacing: { after: 120 },
                 children: [
-                  new TextRun({
-                    text: 'Technologies: ',
-                    bold: true,
-                  }),
+                  new TextRun({ text: 'Technologies: ', bold: true }),
                   new TextRun(project.technologies.join(', ')),
                 ],
+                spacing: { after: 160 },
+                style: 'SkillsList',
               })
             )
           }
         })
       }
 
-      // Create a new document
+      // Create a document with ATS-friendly settings and enhanced styling
       const doc = new Document({
         sections: [{
           properties: {
             page: {
               margin: {
-                top: 720, // 0.5 inch (720 twips)
-                right: 720,
-                bottom: 720,
-                left: 720,
-              },
-            },
-          },
-          children: docSections,
-        }],
-        styles: {
-          default: {
-            document: {
-              run: {
-                font: 'Calibri',
-                size: 22, // 11pt
-              },
-              paragraph: {
-                spacing: { line: 276 }, // 1.15 line spacing
-              },
-            },
-            heading1: {
-              run: {
-                font: 'Calibri',
-                size: 28, // 14pt
-                bold: true,
-              },
-              paragraph: {
-                spacing: { after: 120 }, // 6pt after
-              },
-            },
-            heading2: {
-              run: {
-                font: 'Calibri',
-                size: 24, // 12pt
-                bold: true,
-                color: '2E74B5', // Blue for sections
-              },
-              paragraph: {
-                spacing: { before: 240, after: 120 }, // 12pt before, 6pt after
-                border: {
-                  bottom: {
-                    color: '2E74B5',
-                    size: 1,
-                    style: BorderStyle.SINGLE,
-                  },
-                },
-              },
-            },
-          },
-        },
-      })
-
-      // Create a blob from the document
-      const buffer = await Packer.toBlob(doc)
-      
-      // Create a download link
-      const link = document.createElement('a')
-      link.href = URL.createObjectURL(buffer)
-      link.download = filename
-      
-      // Add to body and click (needed for Firefox)
-      document.body.appendChild(link)
-      
-      // Use setTimeout to ensure the link is properly processed by the browser
-      setTimeout(() => {
-        link.click()
-        
-        // Clean up
-        document.body.removeChild(link)
-        // Release the object URL to free memory
-        setTimeout(() => URL.revokeObjectURL(link.href), 100)
-        
-        toast.dismiss(loadingToast)
-      }, 0)
-      
-      return true
-    } catch (error) {
-      console.error('Error generating Word document:', error)
-      toast.error('Could not generate Word document. Trying alternate format...')
-      return false
-    }
-  }
-
-  const handleDownloadCV = async () => {
-    if (!generatedCV) return
-    
-    try {
-      // Download as Word document
-      const wordSuccess = await downloadAsWord('resume.docx')
-      
-      if (wordSuccess) {
-        toast.success('Resume downloaded as Word document')
-      } else {
-        // Fall back to PDF if Word fails
-        toast.info('Trying PDF format instead...')
-        const pdfSuccess = await downloadAsPDF('resume-pdf-content', 'resume.pdf', 1)
-        
-        if (pdfSuccess) {
-          toast.success('Resume downloaded as PDF')
-        } else {
-          // Fall back to text as last resort
-          await fallbackToText()
-          toast.success('Resume downloaded as text file')
-        }
-      }
-    } catch (error) {
-      console.error('Error downloading resume:', error)
-      toast.error('Failed to download resume. Please try again.')
-    }
-  }
-
-  // Helper function for text fallback
-  const fallbackToText = async () => {
-    let content = ''
-    
-    if (generatedCV?.content) {
-      content = generatedCV.content
-    } else if (generatedCV?.sections) {
-      // Format structured sections into text
-      const sections = generatedCV.sections
-      
-      // Add header
-      content += 'RESUME\n\n'
-      
-      // Add summary
-      if (sections.summary) {
-        content += 'SUMMARY\n'
-        content += sections.summary + '\n\n'
-      }
-      
-      // Add experience
-      if (sections.experience && sections.experience.length > 0) {
-        content += 'EXPERIENCE\n'
-        sections.experience.forEach(exp => {
-          content += `${exp.title} at ${exp.company} (${exp.period})\n`
-          content += exp.description + '\n\n'
-        })
-      }
-      
-      // Add education
-      if (sections.education && sections.education.length > 0) {
-        content += 'EDUCATION\n'
-        sections.education.forEach(edu => {
-          content += `${edu.degree} - ${edu.institution} (${edu.period})\n`
-        })
-        content += '\n'
-      }
-      
-      // Add skills
-      if (sections.skills && sections.skills.length > 0) {
-        content += 'SKILLS\n'
-        content += sections.skills.join(', ') + '\n\n'
-      }
-      
-      // Add projects
-      if (sections.projects && sections.projects.length > 0) {
-        content += 'PROJECTS\n'
-        sections.projects.forEach(project => {
-          content += `${project.name}\n`
-          content += project.description + '\n'
-          if (project.technologies && project.technologies.length > 0) {
-            content += `Technologies: ${project.technologies.join(', ')}\n`
-          }
-          content += '\n'
-        })
-      }
-    }
-    
-    if (content) {
-      downloadTextFile(content, 'resume.txt')
-    }
-  }
-
-  // Helper to download cover letter as a Word document
-  const downloadCoverLetterAsWord = async (filename: string) => {
-    if (typeof window === 'undefined') {
-      return false
-    }
-    
-    if (!generatedCoverLetter || !generatedCoverLetter.content) {
-      toast.error('No cover letter content to download')
-      return false
-    }
-
-    try {
-      // Show loading toast
-      const loadingToast = toast.loading('Generating Word document...')
-
-      // Create a new document
-      const doc = new Document({
-        sections: [{
-          properties: {
-            page: {
-              margin: {
-                top: 1440, // 1 inch (1440 twips)
+                top: 1440, // 1 inch
                 right: 1440,
                 bottom: 1440,
                 left: 1440,
               },
             },
           },
-          children: [
-            // User details at the top
-            ...(userDetails ? [
-              // User's name
-              new Paragraph({
-                text: userDetails.fullName,
-                heading: HeadingLevel.HEADING_1,
-                spacing: { after: 120 },
-              }),
-              
-              // Contact info
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: [
-                      userDetails.email,
-                      userDetails.phone,
-                      userDetails.location
-                    ].filter(Boolean).join(' | '),
-                    size: 20, // 10pt
-                  })
-                ],
-                spacing: { after: 240 },
-              }),
-              
-              // Date
-              new Paragraph({
-                text: new Date().toLocaleDateString('en-US', { 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                }),
-                spacing: { after: 240 },
-              }),
-              
-              // Spacing before content
-              new Paragraph({
-                text: '',
-                spacing: { after: 240 },
-              }),
-            ] : []),
-            
-            // Cover Letter Content - format with proper paragraphs
-            ...generatedCoverLetter.content.split('\n\n')
-              .filter(para => para.trim().length > 0)
-              .map(para => new Paragraph({
-                text: para,
-                spacing: { after: 240 },
-              })),
-              
-            // Signature
-            new Paragraph({
-              text: 'Sincerely,',
-              spacing: { after: 360 },
-            }),
-            
-            new Paragraph({
-              text: userDetails?.fullName || '',
-            }),
-          ],
+          children: docSections,
         }],
         styles: {
-          default: {
-            document: {
+          paragraphStyles: [
+            {
+              id: 'Normal',
+              paragraph: {
+                spacing: { line: 276 }, // 1.15 spacing
+              },
+              run: {
+                font: 'Calibri',
+                size: 24, // 12pt
+              },
+            },
+            {
+              id: 'Title',
+              run: {
+                font: 'Calibri',
+                size: 36, // 18pt
+                bold: true,
+                color: '2F5496',  // Blue color
+              },
+              paragraph: {
+                spacing: { after: 240 },
+              },
+            },
+            {
+              id: 'Subtitle',
+              run: {
+                font: 'Calibri',
+                size: 28, // 14pt
+                italics: true,
+                color: '404040',  // Dark gray
+              },
+              paragraph: {
+                spacing: { after: 120 },
+              },
+            },
+            {
+              id: 'SectionHeading',
+              run: {
+                font: 'Calibri',
+                size: 28, // 14pt
+                bold: true,
+                color: '2F5496',  // Blue color
+              },
+              paragraph: {
+                spacing: { before: 240, after: 120 },
+              },
+            },
+            {
+              id: 'JobTitle',
+              run: {
+                font: 'Calibri',
+                size: 26, // 13pt
+                bold: true,
+              },
+              paragraph: {
+                spacing: { before: 160, after: 0 },
+              },
+            },
+            {
+              id: 'DateRange',
+              run: {
+                font: 'Calibri',
+                size: 22, // 11pt
+                italics: true,
+                color: '595959',  // Gray
+              },
+              paragraph: {
+                spacing: { after: 120 },
+              },
+            },
+            {
+              id: 'BodyText',
               run: {
                 font: 'Calibri',
                 size: 24, // 12pt
               },
               paragraph: {
-                spacing: { line: 360 }, // 1.5 line spacing
+                spacing: { after: 120, line: 276 },
               },
             },
-            heading1: {
+            {
+              id: 'ContactInfo',
+              run: {
+                font: 'Calibri',
+                size: 22, // 11pt
+                color: '595959',  // Gray
+              },
+              paragraph: {
+                spacing: { after: 120 },
+              },
+            },
+            {
+              id: 'SkillsList',
+              run: {
+                font: 'Calibri',
+                size: 22, // 11pt
+              },
+              paragraph: {
+                spacing: { after: 120 },
+              },
+            },
+          ],
+        },
+      })
+
+      // Generate Document
+      const blob = await Packer.toBlob(doc)
+      
+      // Create and trigger download link
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      
+      // Cleanup
+      setTimeout(() => {
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+        toast.dismiss(loadingToast)
+        toast.success('ATS-friendly CV downloaded')
+      }, 100)
+      
+      return true
+    } catch (error) {
+      console.error('Error generating Word document:', error)
+      toast.error('Failed to generate Word document')
+      return false
+    }
+  }
+
+  // Helper function to download CV as text file
+  const downloadCVAsText = async (filename: string, cvContent: GeneratedCV | null = null) => {
+    // Use provided content if available, otherwise use from store
+    const cv = cvContent || generatedCV
+    
+    if (!cv) {
+      toast.error('No CV content to download')
+      return false
+    }
+    
+    try {
+      // Show loading toast
+      const loadingToast = toast.loading('Creating text version...')
+      
+      // Create a complete text version of the CV with all sections
+      let textContent = ''
+      
+      // Add user details
+      if (userDetails) {
+        textContent += `${userDetails.fullName}\n`
+        if (userDetails.jobTitle) textContent += `${userDetails.jobTitle}\n`
+        
+        const contactInfo = []
+        if (userDetails.email) contactInfo.push(userDetails.email)
+        if (userDetails.phone) contactInfo.push(userDetails.phone)
+        if (userDetails.location) contactInfo.push(userDetails.location)
+        
+        if (contactInfo.length > 0) {
+          textContent += `${contactInfo.join(' | ')}\n`
+        }
+        
+        // Add online profiles
+        const profiles = []
+        if (userDetails.linkedin) profiles.push('LinkedIn')
+        if (userDetails.github) profiles.push('GitHub')
+        if (userDetails.website) profiles.push('Website')
+        
+        if (profiles.length > 0) {
+          textContent += `${profiles.join(' | ')}\n`
+        }
+        
+        textContent += '\n'
+      }
+      
+      // Add CV sections
+      if (cv.sections) {
+        // Summary section
+        if (cv.sections.summary) {
+          textContent += 'SUMMARY\n'
+          textContent += '=======\n'
+          textContent += `${cv.sections.summary}\n\n`
+        }
+        
+        // Experience section
+        if (cv.sections.experience && cv.sections.experience.length > 0) {
+          textContent += 'EXPERIENCE\n'
+          textContent += '==========\n'
+          
+          cv.sections.experience.forEach(job => {
+            textContent += `${job.title} | ${job.company}\n`
+            if (job.period) textContent += `${job.period}\n`
+            if (job.description) textContent += `${job.description}\n`
+            textContent += '\n'
+          })
+        }
+        
+        // Education section
+        if (cv.sections.education && cv.sections.education.length > 0) {
+          textContent += 'EDUCATION\n'
+          textContent += '=========\n'
+          
+          cv.sections.education.forEach(edu => {
+            textContent += `${edu.degree} | ${edu.institution}\n`
+            if (edu.period) textContent += `${edu.period}\n`
+            textContent += '\n'
+          })
+        }
+        
+        // Skills section
+        if (cv.sections.skills) {
+          textContent += 'SKILLS\n'
+          textContent += '======\n'
+          
+          if (typeof cv.sections.skills === 'string') {
+            textContent += `${cv.sections.skills}\n\n`
+          } else if (Array.isArray(cv.sections.skills)) {
+            textContent += `${cv.sections.skills.join(', ')}\n\n`
+          }
+        }
+        
+        // Projects section
+        if (cv.sections.projects && cv.sections.projects.length > 0) {
+          textContent += 'PROJECTS\n'
+          textContent += '========\n'
+          
+          cv.sections.projects.forEach(project => {
+            textContent += `${project.name}\n`
+            if (project.description) textContent += `${project.description}\n`
+            if (project.technologies && project.technologies.length > 0) {
+              textContent += `Technologies: ${project.technologies.join(', ')}\n`
+            }
+            textContent += '\n'
+          })
+        }
+      }
+      
+      // Create blob and trigger download immediately
+      const blob = new Blob([textContent], { type: 'text/plain' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      
+      // Clean up with slight delay
+      setTimeout(() => {
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+        toast.dismiss(loadingToast)
+        toast.success('CV text file downloaded')
+      }, 100)
+      
+      return true
+    } catch (error) {
+      console.error('Error generating text file:', error)
+      toast.error('Failed to generate text file')
+      return false
+    }
+  }
+  
+  // Helper function to regenerate CV in current language
+  const regenerateCV = async ({ 
+    language = 'en'
+  }: { 
+    language: string, 
+    preserveFormat?: boolean 
+  }) => {
+    try {
+      toast.loading(`Regenerating CV in ${language}...`)
+      
+      if (!userDetails || !jobDescription) {
+        toast.error('Missing job description or user details')
+        return null
+      }
+      
+      // Make sure we use the latest data from the store
+      const store = useCVStore.getState()
+      const latestExperiences = store.experiences || []
+      const latestEducations = store.educations || []
+      const latestSkillCategories = store.skillCategories || []
+      const latestProjects = store.projects || []
+      
+      console.log('Regenerating CV with language:', language)
+      
+      // Generate a new CV using the server action with the specified language
+      const regeneratedCV = await generateCV(
+        jobDescription,
+        userDetails,
+        latestExperiences,
+        latestEducations,
+        latestSkillCategories,
+        latestProjects,
+        language // Make sure to pass the language parameter correctly
+      )
+      
+      if (!regeneratedCV) {
+        toast.error('CV generation failed')
+        return null
+      }
+      
+      // Update the store with the new CV
+      useCVStore.setState({ generatedCV: regeneratedCV })
+      
+      toast.success(`CV regenerated in ${language}`)
+      return regeneratedCV
+    } catch (error) {
+      console.error('Error regenerating CV:', error)
+      toast.error('Error occurred during CV regeneration')
+      return null
+    }
+  }
+  
+  // Helper function to regenerate cover letter in current language
+  const regenerateCoverLetter = async ({ 
+    language = 'en'
+  }: { 
+    language: string, 
+    preserveFormat?: boolean 
+  }) => {
+    try {
+      if (!userDetails || !jobDescription) {
+        toast.error('Missing job description or user details')
+        return null
+      }
+      
+      // Generate a new cover letter using the server action
+      const regeneratedCoverLetter = await generateCoverLetter(
+        jobDescription,
+        userDetails,
+        experiences || [],
+        educations || [],
+        skillCategories || [],
+        projects || [],
+        language || 'en'
+      )
+      
+      if (!regeneratedCoverLetter) {
+        return null
+      }
+      
+      // Update the store with the new cover letter
+      useCVStore.setState({ generatedCoverLetter: regeneratedCoverLetter })
+      
+      return regeneratedCoverLetter
+    } catch (error) {
+      console.error('Error regenerating cover letter:', error)
+      return null
+    }
+  }
+
+  // Handler for downloading CV
+  const handleDownloadCV = async () => {
+    setIsPending(true)
+    
+    try {
+      // Show a single loading toast
+      const loadingToast = toast.loading('Preparing your CV for download...')
+      
+      // Get current store state
+      const store = useCVStore.getState()
+      const currentLanguage = store.language || 'en'
+      
+      // Only regenerate if necessary (if CV doesn't exist or language changed)
+      let cvToDownload = store.generatedCV
+      
+      if (!cvToDownload) {
+        // No CV exists, generate one
+        cvToDownload = await regenerateCV({
+          language: currentLanguage
+        })
+        
+        if (!cvToDownload) {
+          toast.dismiss(loadingToast)
+          toast.error('Failed to generate CV')
+          setIsPending(false)
+          return
+        }
+      }
+      
+      // Download using the format preference
+      const format = downloadFormat || 'docx'
+      let success = false
+      
+      if (format === 'docx') {
+        // Download directly as Word document
+        success = await downloadAsWord(
+          `cv-${currentLanguage}.docx`, 
+          cvToDownload
+        )
+      } else {
+        // Download directly as text
+        success = await downloadCVAsText(
+          `cv-${currentLanguage}.txt`, 
+          cvToDownload
+        )
+      }
+      
+      // Clean up and notify
+      toast.dismiss(loadingToast)
+      
+      if (success) {
+        toast.success('CV downloaded successfully')
+        trackDownload('cv', format)
+      } else {
+        toast.error('Failed to download CV')
+      }
+    } catch (error) {
+      console.error('Error downloading CV:', error)
+      toast.error('Failed to download CV')
+    } finally {
+      setIsPending(false)
+    }
+  }
+
+  // Helper function to download cover letter as Word
+  const downloadCoverLetterAsWord = async (filename: string, coverLetterContent: GeneratedCoverLetter | null = null) => {
+    if (typeof window === 'undefined') {
+      return false
+    }
+    
+    // Use provided content if available, otherwise use from store
+    const coverLetter = coverLetterContent || generatedCoverLetter
+    
+    if (!coverLetter || !coverLetter.content) {
+      toast.error('No cover letter content to download')
+      return false
+    }
+
+    try {
+      // Show loading toast for better UX
+      const loadingToast = toast.loading('Creating professional cover letter...')
+      
+      // Create sections for the document
+      const docSections = []
+
+      // Add userDetails if available - Professional format
+      if (userDetails) {
+        // Sender info block with elegant styling
+        docSections.push(
+          new Paragraph({
+            alignment: AlignmentType.LEFT,
+            spacing: { after: 120 },
+            children: [
+              new TextRun({ 
+                text: userDetails.fullName, 
+                bold: true, 
+                size: 28,
+                color: '2F5496' // Professional blue color
+              })
+            ],
+            style: 'SenderName',
+          })
+        )
+        
+        // Job title if available
+        if (userDetails.jobTitle) {
+          docSections.push(
+            new Paragraph({
+              text: userDetails.jobTitle,
+              alignment: AlignmentType.LEFT,
+              spacing: { after: 160 },
+              style: 'SenderTitle',
+            })
+          )
+        }
+
+        // Contact details in proper business letter format with styled appearance
+        const contactInfo = []
+        if (userDetails.email) contactInfo.push(userDetails.email)
+        if (userDetails.phone) contactInfo.push(userDetails.phone)
+        if (userDetails.location) contactInfo.push(userDetails.location)
+
+        // Add each contact item on its own line with modern styling
+        contactInfo.forEach(info => {
+          docSections.push(
+            new Paragraph({
+              text: info,
+              alignment: AlignmentType.LEFT,
+              spacing: { after: 40 },
+              style: 'ContactInfo',
+            })
+          )
+        })
+
+        // Add online profiles with elegant formatting
+        const profiles = []
+        if (userDetails.linkedin) profiles.push({ name: 'LinkedIn', link: userDetails.linkedin })
+        if (userDetails.github) profiles.push({ name: 'GitHub', link: userDetails.github })
+        if (userDetails.website) profiles.push({ name: 'Website', link: userDetails.website })
+        
+        profiles.forEach(profile => {
+          docSections.push(
+            new Paragraph({
+              alignment: AlignmentType.LEFT,
+              spacing: { after: 40 },
+              children: [
+                new TextRun({ text: profile.name + ': ', bold: true, size: 22 }),
+                new TextRun({ text: profile.link, color: '0366d6', size: 22 })
+              ],
+              style: 'ContactInfo',
+            })
+          )
+        })
+
+        // Separator line between header and letter content
+        docSections.push(
+          new Paragraph({
+            text: '',
+            spacing: { before: 120, after: 120 },
+            border: {
+              bottom: { color: 'DDDDDD', size: 1, space: 1, style: 'single' },
+            },
+          })
+        )
+
+        // Add date - formal business letter format with modern styling
+        const today = new Date()
+        const formattedDate = today.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        })
+
+        docSections.push(
+          new Paragraph({
+            text: formattedDate,
+            alignment: AlignmentType.LEFT,
+            spacing: { before: 160, after: 240 },
+            style: 'DateStyle',
+          })
+        )
+        
+        // Recipient block with professional styling
+        docSections.push(
+          new Paragraph({
+            text: 'Hiring Manager',
+            alignment: AlignmentType.LEFT,
+            spacing: { after: 40 },
+            style: 'RecipientInfo',
+          })
+        )
+        
+        docSections.push(
+          new Paragraph({
+            text: 'Company Name',
+            alignment: AlignmentType.LEFT,
+            spacing: { after: 40 },
+            style: 'RecipientInfo',
+          })
+        )
+        
+        docSections.push(
+          new Paragraph({
+            text: 'Company Address',
+            alignment: AlignmentType.LEFT,
+            spacing: { after: 240 },
+            style: 'RecipientInfo',
+          })
+        )
+        
+        // Greeting with professional style
+        docSections.push(
+          new Paragraph({
+            text: 'Dear Hiring Manager,',
+            alignment: AlignmentType.LEFT,
+            spacing: { after: 240 },
+            style: 'Greeting',
+          })
+        )
+      }
+
+      // Convert content string to elegantly formatted paragraphs
+      if (coverLetter.content) {
+        // Split by double newlines to get paragraphs
+        const paragraphs = coverLetter.content.split('\n\n')
+        paragraphs.forEach((para, index) => {
+          if (para.trim()) {
+            // Process each paragraph with proper styling
+            docSections.push(
+              new Paragraph({
+                text: para.trim(),
+                alignment: AlignmentType.LEFT,
+                spacing: { after: 240 },
+                style: 'BodyText',
+                // Add first-line indent to all paragraphs except the first one
+                indent: index > 0 ? { firstLine: 720 } : undefined,
+              })
+            )
+          }
+        })
+      } else if (coverLetter.sections) {
+        // Process structured content if available with elegant styling
+        if (coverLetter.sections.introduction) {
+          docSections.push(
+            new Paragraph({
+              text: coverLetter.sections.introduction,
+              alignment: AlignmentType.LEFT,
+              spacing: { after: 240 },
+              style: 'BodyText',
+            })
+          )
+        }
+
+        if (coverLetter.sections.body && Array.isArray(coverLetter.sections.body)) {
+          coverLetter.sections.body.forEach((para, index) => {
+            docSections.push(
+              new Paragraph({
+                text: para,
+                alignment: AlignmentType.LEFT,
+                spacing: { after: 240 },
+                style: 'BodyText',
+                // Add first-line indent to all body paragraphs except the first one
+                indent: index > 0 ? { firstLine: 720 } : undefined,
+              })
+            )
+          })
+        }
+
+        if (coverLetter.sections.conclusion) {
+          docSections.push(
+            new Paragraph({
+              text: coverLetter.sections.conclusion,
+              alignment: AlignmentType.LEFT,
+              spacing: { after: 240 },
+              style: 'BodyText',
+            })
+          )
+        }
+      }
+
+      // Add signature - professional closing with elegant styling
+      docSections.push(
+        new Paragraph({
+          text: 'Sincerely,',
+          alignment: AlignmentType.LEFT,
+          spacing: { after: 480 }, // Extra space for signature
+          style: 'Closing',
+        })
+      )
+
+      // Name in signature with professional styling
+      docSections.push(
+        new Paragraph({
+          alignment: AlignmentType.LEFT,
+          children: [
+            new TextRun({ 
+              text: userDetails?.fullName || '', 
+              bold: true,
+              size: 26,
+              color: '2F5496' // Professional blue color
+            })
+          ],
+          style: 'SignatureName',
+        })
+      )
+      
+      // Job title under signature with elegant styling
+      if (userDetails?.jobTitle) {
+        docSections.push(
+          new Paragraph({
+            text: userDetails.jobTitle,
+            alignment: AlignmentType.LEFT,
+            spacing: { after: 240 },
+            style: 'SignatureTitle',
+          })
+        )
+      }
+
+      // Create a professional document with elegant styling
+      const doc = new Document({
+        sections: [{
+          properties: {
+            page: {
+              margin: {
+                top: 1440, // 1 inch
+                right: 1440,
+                bottom: 1440,
+                left: 1440,
+              },
+            },
+          },
+          children: docSections,
+        }],
+        styles: {
+          paragraphStyles: [
+            {
+              id: 'Normal',
+              paragraph: {
+                spacing: { line: 276 }, // 1.15 spacing
+              },
+              run: {
+                font: 'Calibri',
+                size: 24, // 12pt
+              },
+            },
+            {
+              id: 'SenderName',
               run: {
                 font: 'Calibri',
                 size: 28, // 14pt
                 bold: true,
+                color: '2F5496', // Professional blue
+              },
+              paragraph: {
+                spacing: { after: 120 },
               },
             },
-          },
+            {
+              id: 'SenderTitle',
+              run: {
+                font: 'Calibri',
+                size: 24, // 12pt
+                italics: true,
+                color: '404040', // Dark gray
+              },
+              paragraph: {
+                spacing: { after: 160 },
+              },
+            },
+            {
+              id: 'ContactInfo',
+              run: {
+                font: 'Calibri',
+                size: 22, // 11pt
+                color: '595959', // Gray
+              },
+              paragraph: {
+                spacing: { after: 40 },
+              },
+            },
+            {
+              id: 'DateStyle',
+              run: {
+                font: 'Calibri',
+                size: 22, // 11pt
+                color: '595959', // Gray
+              },
+              paragraph: {
+                spacing: { before: 160, after: 240 },
+              },
+            },
+            {
+              id: 'RecipientInfo',
+              run: {
+                font: 'Calibri',
+                size: 24, // 12pt
+              },
+              paragraph: {
+                spacing: { after: 40 },
+              },
+            },
+            {
+              id: 'Greeting',
+              run: {
+                font: 'Calibri',
+                size: 24, // 12pt
+              },
+              paragraph: {
+                spacing: { after: 240 },
+              },
+            },
+            {
+              id: 'BodyText',
+              run: {
+                font: 'Calibri',
+                size: 24, // 12pt
+              },
+              paragraph: {
+                spacing: { after: 240, line: 276 }, // 1.15 spacing
+              },
+            },
+            {
+              id: 'Closing',
+              run: {
+                font: 'Calibri',
+                size: 24, // 12pt
+              },
+              paragraph: {
+                spacing: { after: 480 },
+              },
+            },
+            {
+              id: 'SignatureName',
+              run: {
+                font: 'Calibri',
+                size: 26, // 13pt
+                bold: true,
+                color: '2F5496', // Professional blue
+              },
+              paragraph: {
+                spacing: { after: 60 },
+              },
+            },
+            {
+              id: 'SignatureTitle',
+              run: {
+                font: 'Calibri',
+                size: 24, // 12pt
+                italics: true,
+                color: '404040', // Dark gray
+              },
+              paragraph: {
+                spacing: { after: 240 },
+              },
+            },
+          ],
         },
       })
 
-      // Create a blob from the document
-      const buffer = await Packer.toBlob(doc)
+      // Generate Document
+      const blob = await Packer.toBlob(doc)
       
-      // Create a download link
+      // Create and trigger download
+      const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
-      link.href = URL.createObjectURL(buffer)
+      link.href = url
       link.download = filename
-      
-      // Add to body and click (needed for Firefox)
       document.body.appendChild(link)
+      link.click()
       
-      // Use setTimeout to ensure the link is properly processed by the browser
+      // Cleanup with appropriate delay
       setTimeout(() => {
-        link.click()
-        
-        // Clean up
         document.body.removeChild(link)
-        // Release the object URL to free memory
-        setTimeout(() => URL.revokeObjectURL(link.href), 100)
-        
+        URL.revokeObjectURL(url)
         toast.dismiss(loadingToast)
-      }, 0)
+        toast.success('Professional cover letter downloaded')
+      }, 100)
       
       return true
     } catch (error) {
-      console.error('Error generating cover letter Word document:', error)
-      toast.error('Could not generate Word document. Trying alternate format...')
+      console.error('Error generating Word document:', error)
+      toast.error('Failed to generate Word document')
+      return false
+    }
+  }
+
+  // Helper to download cover letter as text file
+  const downloadCoverLetterAsText = async (filename: string, coverLetterContent: GeneratedCoverLetter | null = null) => {
+    // Use provided content if available, otherwise use from store
+    const coverLetter = coverLetterContent || generatedCoverLetter
+    
+    if (!coverLetter || !coverLetter.content) {
+      toast.error('No cover letter content to download')
+      return false
+    }
+    
+    try {
+      // Create simplified text content
+      let textContent = ''
+      
+      // Add basic header
+      if (userDetails) {
+        textContent += `${userDetails.fullName}\n`
+        
+        const contactInfo = []
+        if (userDetails.email) contactInfo.push(userDetails.email)
+        if (userDetails.phone) contactInfo.push(userDetails.phone)
+        if (userDetails.location) contactInfo.push(userDetails.location)
+        
+        if (contactInfo.length > 0) {
+          textContent += `${contactInfo.join(' | ')}\n`
+        }
+        
+        // Add date
+        textContent += `\n${new Date().toLocaleDateString()}\n\n`
+      }
+      
+      // Add cover letter content
+      if (coverLetter.content) {
+        textContent += coverLetter.content
+      }
+      
+      // Add signature
+      textContent += '\n\nSincerely,\n\n'
+      textContent += userDetails?.fullName || ''
+      
+      // Create blob and trigger download immediately
+      const blob = new Blob([textContent], { type: 'text/plain' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      
+      // Clean up with slight delay
+      setTimeout(() => {
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+      }, 100)
+      
+      return true
+    } catch (error) {
+      console.error('Error generating text file:', error)
+      toast.error('Failed to generate text file')
       return false
     }
   }
 
   const handleDownloadCoverLetter = async () => {
-    if (!generatedCoverLetter || !generatedCoverLetter.content) return
+    setIsPending(true)
     
     try {
-      // Download as Word document
-      const wordSuccess = await downloadCoverLetterAsWord('cover-letter.docx')
+      // Show a single loading toast
+      const loadingToast = toast.loading('Preparing your cover letter for download...')
       
-      if (wordSuccess) {
-        toast.success('Cover letter downloaded as Word document')
-      } else {
-        // Fall back to PDF if Word fails
-        toast.info('Trying PDF format instead...')
-        const pdfSuccess = await downloadAsPDF('cover-letter-pdf-content', 'cover-letter.pdf')
+      // Get current store state
+      const store = useCVStore.getState()
+      const currentLanguage = store.language || 'en'
+      
+      // Only regenerate if necessary
+      let coverLetterToDownload = store.generatedCoverLetter
+      
+      if (!coverLetterToDownload) {
+        // No cover letter exists, generate one
+        coverLetterToDownload = await regenerateCoverLetter({
+          language: currentLanguage
+        })
         
-        if (pdfSuccess) {
-          toast.success('Cover letter downloaded as PDF')
-        } else {
-          // Fall back to text as last resort
-          downloadTextFile(generatedCoverLetter.content, 'cover-letter.txt')
-          toast.success('Cover letter downloaded as text file')
+        if (!coverLetterToDownload) {
+          toast.dismiss(loadingToast)
+          toast.error('Failed to generate cover letter')
+          setIsPending(false)
+          return
         }
+      }
+      
+      // Download using the format preference
+      const format = downloadFormat || 'docx'
+      let success = false
+      
+      if (format === 'docx') {
+        // Download directly as Word document
+        success = await downloadCoverLetterAsWord(
+          `cover-letter-${currentLanguage}.docx`, 
+          coverLetterToDownload
+        )
+      } else {
+        // Download directly as text
+        success = await downloadCoverLetterAsText(
+          `cover-letter-${currentLanguage}.txt`, 
+          coverLetterToDownload
+        )
+      }
+      
+      // Clean up and notify
+      toast.dismiss(loadingToast)
+      
+      if (success) {
+        toast.success('Cover letter downloaded successfully')
+        trackDownload('cover-letter', format)
+      } else {
+        toast.error('Failed to download cover letter')
       }
     } catch (error) {
       console.error('Error downloading cover letter:', error)
-      toast.error('Failed to download cover letter. Please try again.')
+      toast.error('Failed to download cover letter')
+    } finally {
+      setIsPending(false)
     }
   }
 
@@ -956,6 +1382,9 @@ export function useDocumentActions() {
     handleDownloadCoverLetter,
     handleCopyCV,
     handleCopyCoverLetter,
-    resetGeneratedContent
+    resetGeneratedContent,
+    isPending,
+    setDownloadFormat,
+    downloadFormat
   }
 } 

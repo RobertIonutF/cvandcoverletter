@@ -1,10 +1,34 @@
-import { Button } from '@/components/ui/button'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { useCVStore } from '@/store'
-import { Loader2, FileText, Sparkles, Copy, Download, RefreshCw } from 'lucide-react'
-import { toast } from 'sonner'
-import { useEffect } from 'react'
 import React from 'react'
+import { useCVStore } from '@/store'
+import { Button } from '@/components/ui/button'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Badge } from '@/components/ui/badge'
+import { Sparkles, Loader2, Copy, Download, RefreshCw, FileText } from 'lucide-react'
+import { useEffect } from 'react'
+
+// Language display names and their flags
+const languageFlags: Record<string, string> = {
+  english: '🇺🇸',
+  french: '🇫🇷',
+  spanish: '🇪🇸',
+  german: '🇩🇪',
+  romanian: '🇷🇴',
+  russian: '🇷🇺',
+  chinese: '🇨🇳',
+  japanese: '🇯🇵'
+}
+
+// Language display names
+const languageNames: Record<string, string> = {
+  english: 'English',
+  french: 'French',
+  spanish: 'Spanish',
+  german: 'German',
+  romanian: 'Romanian',
+  russian: 'Russian',
+  chinese: 'Chinese',
+  japanese: 'Japanese'
+}
 
 interface CoverLetterDisplayProps {
   isGeneratingCoverLetter: boolean
@@ -23,9 +47,13 @@ export function CoverLetterDisplay({
   coverLetterContentRef,
   resetGeneratedContent
 }: CoverLetterDisplayProps) {
-  const { userDetails, generatedCoverLetter } = useCVStore()
-  const isValid = !!userDetails
+  const { userDetails, generatedCoverLetter, language } = useCVStore()
   
+  const isValid = !!userDetails && Object.keys(userDetails).length > 0
+  
+  const languageFlag = languageFlags[language] || '🌐'
+  const languageName = languageNames[language] || language
+
   // Debug logging for cover letter content
   useEffect(() => {
     if (generatedCoverLetter) {
@@ -47,9 +75,9 @@ export function CoverLetterDisplay({
             <Loader2 className="h-10 w-10 animate-spin text-blue-600 dark:text-blue-400" />
           </div>
         </div>
-        <h3 className="text-xl font-medium mb-2">Crafting Your Cover Letter</h3>
+        <h3 className="text-xl font-medium mb-2">Writing Your Cover Letter</h3>
         <p className="text-muted-foreground max-w-md">
-          We&apos;re creating a tailored cover letter based on your profile and the job description. 
+          We&apos;re crafting a personalized cover letter based on your profile and the job description. 
           This may take a moment...
         </p>
       </div>
@@ -70,10 +98,19 @@ export function CoverLetterDisplay({
         <Button 
           onClick={handleGenerateCoverLetter} 
           className="gap-2 px-6"
-          disabled={!isValid || !userDetails}
+          disabled={!isValid || isGeneratingCoverLetter}
         >
-          <Sparkles className="h-4 w-4" />
-          Generate Cover Letter
+          {isGeneratingCoverLetter ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <Sparkles className="h-4 w-4" />
+              Generate Cover Letter
+            </>
+          )}
         </Button>
       </div>
     )
@@ -90,166 +127,88 @@ export function CoverLetterDisplay({
     const { introduction, body, conclusion } = generatedCoverLetter.sections
     formattedContent = `${introduction || ''}\n\n${Array.isArray(body) ? body.join('\n\n') : (body || '')}\n\n${conclusion || ''}`
   }
-  
+
+  // Decide what content to display - prefer direct content, fall back to formatted sections
+  const displayContent = hasContent 
+    ? generatedCoverLetter.content 
+    : formattedContent
+
   return (
-    <div className="space-y-4 w-full">
-      <div className="flex justify-between space-x-2 px-4">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="gap-1"
-          onClick={handleGenerateCoverLetter}
-          disabled={isGeneratingCoverLetter || !isValid}
-        >
-          <RefreshCw className="h-4 w-4" />
-          Regenerate
-        </Button>
+    <div className="h-full flex flex-col">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold">Your Cover Letter</h2>
+          <Badge 
+            variant="outline" 
+            className="gap-1 text-xs font-normal bg-slate-50 dark:bg-slate-900"
+          >
+            <span>{languageFlag}</span>
+            <span>{languageName}</span>
+          </Badge>
+        </div>
         
-        <div className="flex space-x-2">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="h-8 gap-1"
-                  onClick={handleDownloadCoverLetter}
-                  disabled={!hasContent && !formattedContent}
-                >
-                  <Download className="h-4 w-4" />
-                  DOCX
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Download as Word Document (.docx)</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  id="copy-cover-letter-btn" 
-                  size="icon" 
-                  className="h-8 w-8" 
-                  onClick={handleCopyCoverLetter}
-                  disabled={!hasContent && !formattedContent}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Copy to Clipboard</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="destructive" 
-                  size="icon" 
-                  className="h-8 w-8"
-                  onClick={() => {
-                    resetGeneratedContent()
-                    toast.success("Content reset. Try generating again.")
-                  }}
-                >
-                  <span className="sr-only">Reset</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
-                    <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-                    <path d="M3 3v5h5"></path>
-                    <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
-                    <path d="M16 21h5v-5"></path>
-                  </svg>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Reset Content</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+        <div className="flex items-center gap-2">
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="gap-1" 
+            onClick={handleCopyCoverLetter}
+          >
+            <Copy className="h-3.5 w-3.5" />
+            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Copy</span>
+          </Button>
+          
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="gap-1" 
+            onClick={handleDownloadCoverLetter}
+          >
+            <Download className="h-3.5 w-3.5" />
+            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Download</span>
+          </Button>
+          
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="gap-1" 
+            onClick={resetGeneratedContent}
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Reset</span>
+          </Button>
+          
+          <Button 
+            size="sm" 
+            variant="default" 
+            className="gap-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700" 
+            onClick={handleGenerateCoverLetter}
+            disabled={isGeneratingCoverLetter}
+          >
+            {isGeneratingCoverLetter ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <span className="whitespace-nowrap">Generating...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-3.5 w-3.5" />
+                <span className="whitespace-nowrap">Regenerate</span>
+              </>
+            )}
+          </Button>
         </div>
       </div>
       
-      {/* Display wrapper with theme support */}
-      <div className="mx-auto max-w-4xl rounded-md border shadow-md overflow-hidden">
-        {/* PDF optimized content (hidden in UI but used for downloads/printing) */}
-        <div className="hidden">
-          <div 
-            id="cover-letter-pdf-content" 
-            className="p-8 bg-white text-black font-serif ats-friendly-letter cover-letter-content"
-            style={{ 
-              color: 'black', 
-              backgroundColor: 'white',
-              fontFamily: 'Georgia, Times New Roman, serif',
-              lineHeight: '1.5',
-              fontSize: '12pt'
-            }}
-          >
-            {hasContent && (
-              <div className="whitespace-pre-wrap font-serif max-w-none">
-                {generatedCoverLetter.content}
-              </div>
-            )}
-            {!hasContent && hasSections && generatedCoverLetter.sections && (
-              <div className="whitespace-pre-wrap font-serif max-w-none">
-                {generatedCoverLetter.sections.introduction && (
-                  <div className="mb-4">{generatedCoverLetter.sections.introduction}</div>
-                )}
-                
-                {generatedCoverLetter.sections.body && Array.isArray(generatedCoverLetter.sections.body) && (
-                  <div className="space-y-4">
-                    {generatedCoverLetter.sections.body.map((paragraph, index) => (
-                      <p key={index}>{paragraph}</p>
-                    ))}
-                  </div>
-                )}
-                
-                {generatedCoverLetter.sections.conclusion && (
-                  <div className="mt-4">{generatedCoverLetter.sections.conclusion}</div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-        
-        {/* Visible content with theme support */}
+      <ScrollArea className="flex-1 bg-white dark:bg-slate-900/50 border rounded-md p-4 shadow-sm">
         <div 
           ref={coverLetterContentRef} 
-          className="p-8 bg-white dark:bg-slate-900 text-black dark:text-white font-serif ats-friendly-letter cover-letter-content min-h-[300px]"
+          className="whitespace-pre-wrap font-sans text-sm" 
+          id="cover-letter-content"
         >
-          {hasContent ? (
-            <div className="whitespace-pre-wrap text-sm leading-relaxed font-serif prose prose-sm dark:prose-invert max-w-none">
-              {generatedCoverLetter.content}
-            </div>
-          ) : hasSections && generatedCoverLetter.sections ? (
-            <div className="whitespace-pre-wrap text-sm leading-relaxed font-serif prose prose-sm dark:prose-invert max-w-none">
-              {generatedCoverLetter.sections.introduction && (
-                <div className="mb-4">{generatedCoverLetter.sections.introduction}</div>
-              )}
-              
-              {generatedCoverLetter.sections.body && Array.isArray(generatedCoverLetter.sections.body) && (
-                <div className="space-y-4">
-                  {generatedCoverLetter.sections.body.map((paragraph, index) => (
-                    <p key={index}>{paragraph}</p>
-                  ))}
-                </div>
-              )}
-              
-              {generatedCoverLetter.sections.conclusion && (
-                <div className="mt-4">{generatedCoverLetter.sections.conclusion}</div>
-              )}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-[300px] text-center text-muted-foreground">
-              <FileText className="h-8 w-8 mb-2" />
-              <p>The cover letter content appears to be empty. Please try regenerating it.</p>
-            </div>
-          )}
+          {displayContent}
         </div>
-      </div>
+      </ScrollArea>
     </div>
   )
 } 

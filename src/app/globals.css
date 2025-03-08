@@ -8,7 +8,61 @@
   }
 }
 
+/* Custom animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out forwards;
+}
+
+@keyframes badgeHighlight {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 5px rgba(74, 222, 128, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0);
+  }
+}
+
+.badge-highlight {
+  animation: badgeHighlight 1s ease-in-out;
+}
+
+@keyframes textareaHighlight {
+  0% {
+    box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.3);
+    border-color: rgba(74, 222, 128, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.5);
+    border-color: rgba(74, 222, 128, 0.9);
+  }
+  100% {
+    box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.3);
+    border-color: rgba(74, 222, 128, 0.5);
+  }
+}
+
+.textarea-saved {
+  animation: textareaHighlight 2s ease-in-out;
+  border-color: rgba(74, 222, 128, 0.5) !important;
+  transition: all 0.3s ease;
+}
 
 @layer base {
   :root {
@@ -81,8 +135,6 @@
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
-
-
 
 @layer base {
   * {

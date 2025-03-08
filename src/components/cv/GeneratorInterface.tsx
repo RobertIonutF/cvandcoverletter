@@ -11,14 +11,14 @@ import { ExperienceForm } from '@/components/ExperienceForm'
 import { EducationForm } from '@/components/EducationForm'
 import { SkillsForm } from '@/components/SkillsForm'
 import { ProjectsForm } from '@/components/ProjectsForm'
-import { ResumeUploader } from '@/components/ResumeUploader'
 import { JobDescriptionForm } from '@/components/cv/JobDescriptionForm'
 import { ResumeDisplay } from '@/components/cv/ResumeDisplay'
 import { CoverLetterDisplay } from '@/components/cv/CoverLetterDisplay'
+import { LanguageSelector } from '@/components/ui/language-selector'
 
 // Hooks
 import { useDocumentGeneration } from '@/hooks/useDocumentGeneration'
-import { useDocumentActions } from '@/hooks/useDocumentActions'
+import useDocumentActions from '@/hooks/useDocumentActions'
 import { useCVStore } from '@/store'
 
 export function GeneratorInterface() {
@@ -31,8 +31,7 @@ export function GeneratorInterface() {
     isGeneratingCoverLetter,
     isLoading,
     handleGenerateCV: originalHandleGenerateCV,
-    handleGenerateCoverLetter: originalHandleGenerateCoverLetter,
-    handleSubmitJobDescription
+    handleGenerateCoverLetter: originalHandleGenerateCoverLetter
   } = useDocumentGeneration()
   
   // Wrap generation functions to ensure void return types
@@ -88,7 +87,6 @@ export function GeneratorInterface() {
               <ScrollArea className="flex-1">
                 <TabsContent value="details" className="p-4 space-y-6">
                   <UserDetailsForm />
-                  <ResumeUploader />
                 </TabsContent>
                 <TabsContent value="experience" className="mt-0 px-1">
                   <ExperienceForm />
@@ -113,7 +111,6 @@ export function GeneratorInterface() {
         <ResizablePanel defaultSize={25} minSize={20}>
           <div className="h-full">
             <JobDescriptionForm 
-              onSubmit={handleSubmitJobDescription} 
               isLoading={isLoading}
             />
           </div>
@@ -130,8 +127,8 @@ export function GeneratorInterface() {
                 onValueChange={setActiveTab} 
                 className="h-full flex flex-col"
               >
-                <div className="px-4 pt-4 border-b">
-                  <TabsList className="w-full max-w-md mx-auto">
+                <div className="px-4 pt-4 border-b flex items-center justify-between">
+                  <TabsList className="w-full max-w-md">
                     <TabsTrigger value="resume" className="flex-1">Resume</TabsTrigger>
                     <TabsTrigger value="cover-letter" className="flex-1 relative">
                       Cover Letter
@@ -140,6 +137,11 @@ export function GeneratorInterface() {
                       )}
                     </TabsTrigger>
                   </TabsList>
+                  
+                  {/* Language selector */}
+                  <div className="flex items-center ml-2">
+                    <LanguageSelector />
+                  </div>
                 </div>
                 
                 <TabsContent value="resume" className="flex-1 p-6 overflow-auto">

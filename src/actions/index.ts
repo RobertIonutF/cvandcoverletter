@@ -12,7 +12,6 @@ import {
 import { openai } from '@ai-sdk/openai'
 import { generateObject } from 'ai'
 import { z } from 'zod'
-import { parsePDF } from '@/lib/pdf-utils'
 
 // Define schemas for structured output
 const cvSchema = z.object({
@@ -59,58 +58,10 @@ const skillsAnalysisSchema = z.object({
   skills: z.array(z.string())
 })
 
-// Schema for extracted resume data
-const extractedResumeSchema = z.object({
-  userDetails: z.object({
-    fullName: z.string(),
-    jobTitle: z.string(),
-    email: z.string(),
-    phone: z.string(),
-    location: z.string(),
-    summary: z.string(),
-    linkedin: z.string(),
-    website: z.string(),
-    github: z.string()
-  }),
-  experiences: z.array(
-    z.object({
-      jobTitle: z.string(),
-      company: z.string(),
-      location: z.string(),
-      startDate: z.string(),
-      endDate: z.string(),
-      current: z.boolean(),
-      description: z.string()
-    })
-  ),
-  educations: z.array(
-    z.object({
-      degree: z.string(),
-      institution: z.string(),
-      location: z.string(),
-      startDate: z.string(),
-      endDate: z.string(),
-      current: z.boolean(),
-      description: z.string()
-    })
-  ),
-  projects: z.array(
-    z.object({
-      name: z.string(),
-      description: z.string(),
-      technologies: z.array(z.string()),
-      url: z.string(),
-      startDate: z.string(),
-      endDate: z.string()
-    })
-  ),
-  skills: z.array(z.string())
-})
-
 // These are placeholder server actions that will be implemented later
 // For now, they just return mock data for UI development
 
-export async function generateCV(jobDescription: string, userDetails: UserDetails, experiences: Experience[], educations: Education[], skillCategories: SkillCategory[], projects: Project[] = []): Promise<GeneratedCV> {
+export async function generateCV(jobDescription: string, userDetails: UserDetails, experiences: Experience[], educations: Education[], skillCategories: SkillCategory[], projects: Project[] = [], language: string = 'english'): Promise<GeneratedCV> {
   try {
     console.log('Starting CV generation with:', { 
       jobDescriptionLength: jobDescription?.length,
@@ -118,7 +69,8 @@ export async function generateCV(jobDescription: string, userDetails: UserDetail
       experiencesCount: experiences?.length,
       educationsCount: educations?.length,
       skillCategoriesCount: skillCategories?.length,
-      projectsCount: projects?.length
+      projectsCount: projects?.length,
+      language
     })
     
     // Log more detailed information for debugging
@@ -159,6 +111,9 @@ export async function generateCV(jobDescription: string, userDetails: UserDetail
     const prompt = `
       You are an expert CV writer with 15+ years of experience specializing in ATS optimization. Create a highly tailored resume that perfectly matches this specific job description while authentically representing the candidate's qualifications.
       
+      TARGET LANGUAGE: ${language.toUpperCase()}
+      Output the entire resume in ${language} language. Translate all content, including section headings, bullet points, and phrases into ${language}.
+      
       USER DETAILS:
       Name: ${userDetails.fullName}
       Title: ${userDetails.jobTitle || 'Professional'}
@@ -185,17 +140,19 @@ export async function generateCV(jobDescription: string, userDetails: UserDetail
       ${jobDescription}
 
       DETAILED INSTRUCTIONS:
-      1. Start with a strategic keyword analysis of the job description to identify:
+      1. Start with a comprehensive keyword analysis of the job description to identify:
          - Primary hard skills and technical competencies required
          - Soft skills and qualities emphasized
          - Industry-specific terminology and buzzwords
          - Key responsibilities and deliverables
+         - Company values and culture indicators
       
       2. Create a compelling professional summary (3-5 lines) that:
          - Positions the candidate as an ideal fit for THIS SPECIFIC role
          - Front-loads the most relevant qualifications and achievements
          - Incorporates 3-5 key skills/terms from the job description
          - Quantifies experience level and impact where possible
+         - Aligns with the company's mission or values when apparent from the job description
       
       3. For work experiences, transform the provided information to:
          - Highlight accomplishments that DIRECTLY relate to the job requirements
@@ -204,6 +161,7 @@ export async function generateCV(jobDescription: string, userDetails: UserDetail
          - Demonstrate growth, leadership, and complexity of work
          - Emphasize transferable skills for career transitions
          - Feature keywords from the job description naturally
+         - Prioritize experiences that best match the job's requirements
       
       4. For education and certifications:
          - Highlight relevant coursework or specializations that match job requirements
@@ -229,16 +187,23 @@ export async function generateCV(jobDescription: string, userDetails: UserDetail
          - Free of objective statements, references, or personal pronouns
       
       8. Apply job description keyword matching:
-         - Identify 10-15 key terms from the job description
+         - Identify 15-20 key terms from the job description
          - Naturally incorporate these terms throughout the resume
          - Use exact phrasing for technical skills and tools
          - Adapt industry terminology to match the employer's language
+         - Ensure critical requirements from the job description are addressed
+      
+      9. Language adaptation:
+         - Use appropriate ${language} terminology for all standard resume sections (e.g., "Education", "Experience", "Skills")
+         - Ensure the language style is formal and professional in ${language}
+         - Adapt any English idioms or phrases to culturally appropriate equivalents in ${language}
+         - Use proper grammar and punctuation specific to ${language}
       
       The CV must be formatted for modern ATS systems, scoring 90%+ match for keyword relevance, while remaining readable and authentic for human reviewers.
       
       Your response MUST include both:
-      1. A summary field with a professional summary
-      2. Properly structured sections for experience, education, projects (if provided), and skills
+      1. A summary field with a professional summary in ${language}
+      2. Properly structured sections for experience, education, projects (if provided), and skills in ${language}
       3. NO fluff or unnecessary content - every line should demonstrate value
       4. For each experience, only include achievements and responsibilities most relevant to this job
     `
@@ -295,7 +260,7 @@ export async function generateCV(jobDescription: string, userDetails: UserDetail
   }
 }
 
-export async function generateCoverLetter(jobDescription: string, userDetails: UserDetails, experiences: Experience[], educations: Education[] = [], skillCategories: SkillCategory[] = [], projects: Project[] = []): Promise<GeneratedCoverLetter> {
+export async function generateCoverLetter(jobDescription: string, userDetails: UserDetails, experiences: Experience[], educations: Education[] = [], skillCategories: SkillCategory[] = [], projects: Project[] = [], language: string = 'english'): Promise<GeneratedCoverLetter> {
   try {
     console.log('Starting cover letter generation with:', { 
       jobDescriptionLength: jobDescription?.length,
@@ -303,7 +268,8 @@ export async function generateCoverLetter(jobDescription: string, userDetails: U
       experiencesCount: experiences?.length,
       educationsCount: educations?.length,
       skillCategoriesCount: skillCategories?.length,
-      projectsCount: projects?.length
+      projectsCount: projects?.length,
+      language
     })
     
     // Format user data for the prompt, handling empty arrays
@@ -338,6 +304,9 @@ export async function generateCoverLetter(jobDescription: string, userDetails: U
     const prompt = `
       You are a modern career coach who helps candidates write authentic, human cover letters that connect with recruiters on platforms like LinkedIn. Create a conversational yet professional cover letter that shows genuine interest and relevant qualifications.
       
+      TARGET LANGUAGE: ${language.toUpperCase()}
+      Output the entire cover letter in ${language} language. Translate all content, including greetings, body paragraphs, and closing statements into ${language}.
+      
       USER DETAILS:
       Name: ${userDetails.fullName}
       Title: ${userDetails.jobTitle || 'Professional'}
@@ -364,34 +333,41 @@ export async function generateCoverLetter(jobDescription: string, userDetails: U
       COVER LETTER GUIDELINES:
       
       1. Write in a warm, natural human voice that shows personality while remaining professional
-      2. Keep the letter concise (250-350 words) - recruiters scan quickly on platforms like LinkedIn
+      2. Keep the letter concise (300-400 words) - but ensure it fully addresses the key points from the job description
       3. Use a conversational tone that feels like the candidate speaking naturally
-      4. Focus on 2-3 most relevant experiences/skills that directly connect to the job
+      4. Focus on 3-4 most relevant experiences/skills that directly connect to the job
       5. Show genuine enthusiasm for the specific role and company
       6. Avoid clichés, jargon, and overly formal language
       7. Include relevant keywords from the job description naturally
       8. Format for easy scanning with short paragraphs (2-4 sentences each)
+      9. Demonstrate understanding of the company's mission or values when apparent from the job description
+      10. Use appropriate language conventions, greetings, and professional tone specific to ${language}
       
       STRUCTURE:
       
-      • Opening (2-3 sentences):
-        - Address with a friendly but professional greeting
+      • Opening (3-4 sentences):
+        - Address with a friendly but professional greeting appropriate in ${language}
         - Clearly state the position being applied for
-        - Add a brief, genuine statement about interest in the role/company 
+        - Add a brief, genuine statement about interest in the role/company
+        - Include how you discovered the position if relevant
       
-      • Main section (1-2 paragraphs):
-        - Connect the candidate's 2-3 most relevant experiences directly to key job requirements
+      • Main section (2-3 paragraphs):
+        - Connect the candidate's 3-4 most relevant experiences directly to key job requirements
         - Focus on specific achievements and skills that demonstrate capability
-        - Include 1-2 brief examples with results where possible
+        - Include 2-3 brief examples with results where possible
         - Show how the candidate would add value in this specific role
+        - Address any specific requirements mentioned in the job description
       
       • Brief closing:
         - Express sincere interest in discussing the opportunity further
-        - Include a simple, professional sign-off
+        - Mention availability for interviews or next steps
+        - Include a simple, professional sign-off appropriate in ${language}
       
       This should feel like a personalized message from the candidate to a hiring manager, not a formal letter. It should be genuine, highlight only the most relevant qualifications, and show the human behind the resume.
       
       The cover letter must appear authentic - like something a real person would write to express genuine interest in a role they're qualified for, not AI-generated text.
+      
+      Create the entire cover letter in ${language}, including appropriate greetings and closings for that language.
     `
 
     console.log('Calling OpenAI API for cover letter generation...')
@@ -491,8 +467,13 @@ export async function analyzeJobDescription(jobDescription: string): Promise<str
       ${jobDescription}
 
       Return an object with a 'skills' array containing the skills and technologies mentioned in or implied by the job description.
-      Focus on hard skills, technologies, tools, and domain knowledge. Limit to the most important 
-      10-15 skills.
+      Focus on both hard skills (technologies, tools, programming languages, frameworks, methodologies) 
+      and important soft skills or domain knowledge.
+      
+      Analyze the job description thoroughly and include both explicitly mentioned skills
+      and those that are implicitly required based on the job responsibilities.
+      
+      Prioritize the skills by relevance to the job, and include up to 20 skills.
     `
 
     console.log('Calling OpenAI API for job description analysis...')
@@ -533,155 +514,4 @@ export async function saveUserDetails(data: UserDetails) {
   }
 }
 
-export async function extractResumeFromPDF(pdfText: string) {
-  try {
-    console.log('Starting resume extraction from PDF')
-    
-    // Create the prompt for the AI
-    const prompt = `
-      You are an expert resume parser. Extract structured information from the following resume text.
-      The text was extracted from a PDF and may have formatting issues, missing line breaks, or merged sections.
-      
-      RESUME TEXT:
-      ${pdfText}
-      
-      Extract the following information in a structured format:
-      1. Personal details (name, job title, email, phone, location, summary, LinkedIn, website, GitHub)
-      2. Work experiences (job title, company, location, dates, description)
-      3. Education (degree, institution, location, dates)
-      4. Projects (name, description, technologies used, URL if available, dates)
-      5. Skills (list of technical and soft skills)
-      
-      For dates, try to format them as MM/YYYY or YYYY. If a position is current, mark it as such.
-      If any information is missing or unclear, leave the field empty or make a best guess based on context.
-      
-      IMPORTANT EXTRACTION GUIDELINES:
-      - The text may be poorly formatted due to PDF extraction limitations
-      - Look for patterns that indicate section headers like "EXPERIENCE", "EDUCATION", "SKILLS", etc.
-      - For experiences and education, try to identify start and end dates, even if they're not clearly formatted
-      - For projects, identify technologies used even if they're mentioned in a list or paragraph
-      - If the text contains bullet points that are merged together, try to separate them logically
-      - If you can't find specific information, use the default values provided below
-      
-      IMPORTANT: All fields in userDetails are required. If not explicitly mentioned in the resume, use these defaults:
-      - Job title: Infer from resume or use "Professional"
-      - Email: "example@example.com"
-      - Phone: "Not provided"
-      - Location: "Not specified"
-      - Summary: "Professional with experience in the field" if not found
-      - LinkedIn: "Not provided"
-      - Website: "Not provided"
-      - GitHub: "Not provided"
-      
-      For experiences, all fields are required. Use these defaults if not found:
-      - Location: "Not specified"
-      - EndDate: "Present" for current positions
-      - Current: true/false based on end date (true if "Present" or missing)
-      
-      For educations, all fields are required. Use these defaults if not found:
-      - Location: "Not specified"
-      - EndDate: "Present" for current education
-      - Current: true/false based on end date
-      - Description: "Completed coursework in the program" if missing
-      
-      For projects, all fields are required. Use these defaults if not found:
-      - Technologies: ["Not specified"] if no technologies are mentioned
-      - URL: "Not available" if no URL is provided
-      - StartDate: "Not specified" if no start date is mentioned
-      - EndDate: "Present" if project appears to be ongoing
-      
-      If no projects are found, include at least one placeholder project with:
-      - Name: "Personal Project"
-      - Description: "No specific projects mentioned in resume"
-      - Technologies: ["Not specified"]
-      - URL: "Not available"
-      - StartDate: "Not specified"
-      - EndDate: "Present"
-    `
-
-    console.log('Calling OpenAI API for resume extraction...')
-    
-    try {
-      // Generate the structured resume data
-      const result = await generateObject({
-        model: openai('gpt-4o', {
-          structuredOutputs: true,
-        }),
-        schema: extractedResumeSchema,
-        prompt
-      })
-
-      console.log('Resume extraction successful')
-      
-      return result.object
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown API error'
-      console.error('API Error details:', error)
-      
-      // Check for specific error types
-      if (errorMessage.includes('schema')) {
-        throw new Error(`Schema validation error: ${errorMessage}. Please check the schema definition.`)
-      } else if (errorMessage.includes('rate limit')) {
-        throw new Error('API rate limit exceeded. Please try again later.')
-      } else if (errorMessage.includes('timeout')) {
-        throw new Error('API request timed out. Please try again.')
-      } else {
-        throw new Error(`API Error: ${errorMessage}`)
-      }
-    }
-  } catch (error) {
-    console.error('Error extracting resume:', error)
-    
-    // Provide a more user-friendly error message
-    if (error instanceof Error) {
-      if (error.message.includes('Schema validation')) {
-        throw new Error('There was a problem with the resume format. Please try a different PDF.')
-      } else if (error.message.includes('API')) {
-        throw new Error('There was a problem communicating with our AI service. Please try again later.')
-      } else {
-        throw new Error(`Failed to extract resume information: ${error.message}`)
-      }
-    } else {
-      throw new Error('Failed to extract resume information. Please try again.')
-    }
-  }
-}
-
-export async function parsePDFAndExtractResume(formData: FormData) {
-  try {
-    console.log('Starting PDF parsing on server')
-    
-    // Get the PDF file from FormData
-    const pdfFile = formData.get('pdfFile') as File
-    
-    if (!pdfFile) {
-      throw new Error('No PDF file provided')
-    }
-    
-    // Convert File to ArrayBuffer and then to Buffer for pdf-parse
-    const arrayBuffer = await pdfFile.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
-    
-    // Use pdf-parse to extract text
-    const data = await parsePDF(buffer)
-    const pdfText = data.text || ''
-    
-    console.log('PDF parsing successful, text length:', pdfText.length)
-    
-    if (pdfText.length < 50) {
-      console.warn('Warning: Extracted text is very short, PDF might be scanned or protected')
-      throw new Error('The PDF contains very little text. It might be scanned or protected.')
-    }
-    
-    // Now that we have the text, use the existing function to extract structured data
-    return await extractResumeFromPDF(pdfText)
-  } catch (error) {
-    console.error('Error parsing PDF:', error)
-    
-    if (error instanceof Error) {
-      throw new Error(`Failed to parse PDF: ${error.message}`)
-    } else {
-      throw new Error('Failed to parse PDF. Please try a different file.')
-    }
-  }
-} 
+// Resume upload functions have been removed as they were unstable and buggy 

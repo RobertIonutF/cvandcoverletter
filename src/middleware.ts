@@ -37,7 +37,8 @@ const ALLOWED_BOTS = [
 // API routes that should be protected
 const PROTECTED_API_ROUTES = [
   '/api/generate',
-  '/api/download'
+  '/api/download',
+  '/api/extract-job'
 ]
 
 // Clean up old entries from the rate limiting map
