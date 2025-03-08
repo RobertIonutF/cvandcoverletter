@@ -2,26 +2,484 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-}
-
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
+}
+
+
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    --primary: 0 0% 9%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 0 0% 3.9%;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --radius: 0.5rem;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+  .dark {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* PDF Export Styles */
+.pdf-export {
+  font-family: Arial, 'Times New Roman', sans-serif !important;
+  color: #000 !important;
+  background-color: #fff !important;
+  line-height: 1.5 !important;
+  padding: 20px !important;
+  margin: 0 !important;
+  border: none !important;
+}
+
+.pdf-export h1,
+.pdf-export h2,
+.pdf-export h3,
+.pdf-export h4 {
+  color: #000 !important;
+  font-weight: bold !important;
+  margin-bottom: 0.5em !important;
+  page-break-after: avoid !important;
+}
+
+.pdf-export p {
+  margin-bottom: 0.75em !important;
+  font-size: 11pt !important;
+  line-height: 1.5 !important;
+  color: #000 !important;
+}
+
+.pdf-export .text-base {
+  font-size: 11pt !important;
+  color: #000 !important;
+}
+
+.pdf-export .text-sm {
+  font-size: 10pt !important;
+  color: #000 !important;
+}
+
+.pdf-export .text-lg {
+  font-size: 12pt !important;
+  color: #000 !important;
+}
+
+.pdf-export .text-xl {
+  font-size: 14pt !important;
+  color: #000 !important;
+}
+
+.pdf-export .text-2xl {
+  font-size: 16pt !important;
+  color: #000 !important;
+}
+
+.pdf-export .font-bold {
+  font-weight: bold !important;
+}
+
+.pdf-export .font-semibold {
+  font-weight: 600 !important;
+}
+
+.pdf-export .border-b {
+  border-bottom: 1px solid #000 !important;
+}
+
+.pdf-export .bg-muted,
+.pdf-export .bg-gray-100 {
+  background-color: #f3f4f6 !important;
+  border: 1px solid #e5e7eb !important;
+  color: #000 !important;
+}
+
+/* Pagination control */
+.page-break-inside-avoid {
+  page-break-inside: avoid !important;
+}
+
+.page-break-before {
+  page-break-before: always !important;
+}
+
+.page-break-after {
+  page-break-after: always !important;
+}
+
+/* Ensure proper spacing in PDF */
+.pdf-export .mb-1 {
+  margin-bottom: 0.25rem !important;
+}
+
+.pdf-export .mb-2 {
+  margin-bottom: 0.5rem !important;
+}
+
+.pdf-export .mb-3 {
+  margin-bottom: 0.75rem !important;
+}
+
+.pdf-export .mb-4 {
+  margin-bottom: 1rem !important;
+}
+
+.pdf-export .mb-6 {
+  margin-bottom: 1.5rem !important;
+}
+
+.pdf-export .mb-8 {
+  margin-bottom: 2rem !important;
+}
+
+.pdf-export .space-y-4 > * + * {
+  margin-top: 1rem !important;
+}
+
+.pdf-export .space-y-5 > * + * {
+  margin-top: 1.25rem !important;
+}
+
+.pdf-export .space-y-6 > * + * {
+  margin-top: 1.5rem !important;
+}
+
+/* Compact CV and Cover Letter Styles */
+.cv-compact.pdf-export {
+  font-size: 10pt !important;
+  line-height: 1.2 !important;
+}
+
+.cv-compact.pdf-export h1 {
+  font-size: 14pt !important;
+  margin-bottom: 0.3em !important;
+}
+
+.cv-compact.pdf-export h2 {
+  font-size: 12pt !important;
+  margin-bottom: 0.3em !important;
+  padding-bottom: 0.1em !important;
+}
+
+.cv-compact.pdf-export h3 {
+  font-size: 11pt !important;
+  margin-bottom: 0.2em !important;
+}
+
+.cv-compact.pdf-export p {
+  font-size: 10pt !important;
+  line-height: 1.2 !important;
+  margin-bottom: 0.3em !important;
+}
+
+.cv-compact.pdf-export .text-sm {
+  font-size: 9pt !important;
+}
+
+.cv-compact.pdf-export .text-xs {
+  font-size: 8pt !important;
+}
+
+.cv-compact.pdf-export .mb-1 {
+  margin-bottom: 0.1rem !important;
+}
+
+.cv-compact.pdf-export .mb-2 {
+  margin-bottom: 0.2rem !important;
+}
+
+.cv-compact.pdf-export .mb-3 {
+  margin-bottom: 0.3rem !important;
+}
+
+.cv-compact.pdf-export .mb-4 {
+  margin-bottom: 0.4rem !important;
+}
+
+.cv-compact.pdf-export .space-y-2 > * + * {
+  margin-top: 0.2rem !important;
+}
+
+.cv-compact.pdf-export .space-y-3 > * + * {
+  margin-top: 0.3rem !important;
+}
+
+.cv-compact.pdf-export .space-y-4 > * + * {
+  margin-top: 0.4rem !important;
+}
+
+.letter-compact.pdf-export {
+  font-size: 10pt !important;
+  line-height: 1.3 !important;
+}
+
+.letter-compact.pdf-export p {
+  font-size: 10pt !important;
+  line-height: 1.3 !important;
+  margin-bottom: 0.4em !important;
+}
+
+.letter-compact.pdf-export .mb-0\.5 {
+  margin-bottom: 0.05rem !important;
+}
+
+.letter-compact.pdf-export .mb-1 {
+  margin-bottom: 0.1rem !important;
+}
+
+.letter-compact.pdf-export .mb-2 {
+  margin-bottom: 0.2rem !important;
+}
+
+.letter-compact.pdf-export .mb-3 {
+  margin-bottom: 0.3rem !important;
+}
+
+.letter-compact.pdf-export .mb-4 {
+  margin-bottom: 0.4rem !important;
+}
+
+.letter-compact.pdf-export .space-y-3 > * + * {
+  margin-top: 0.3rem !important;
+}
+
+.letter-compact.pdf-export .space-y-4 > * + * {
+  margin-top: 0.4rem !important;
+}
+
+/* Enhanced ATS-friendly CV styles */
+.ats-friendly-cv {
+  font-family: Arial, Helvetica, sans-serif;
+  line-height: 1.5;
+  color: #000;
+  background-color: #fff;
+  max-width: 800px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.ats-friendly-cv .cv-content {
+  font-size: 12px;
+}
+
+.ats-friendly-cv h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+}
+
+.ats-friendly-cv h2 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #2c3e50;
+  text-transform: uppercase;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.25rem;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  page-break-after: avoid;
+}
+
+.ats-friendly-cv h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 0.25rem;
+}
+
+.ats-friendly-cv p {
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
+
+.ats-friendly-cv .contact-info {
+  margin-bottom: 1.5rem;
+  color: #4a5568;
+}
+
+.ats-friendly-cv .experience-item,
+.ats-friendly-cv .education-item,
+.ats-friendly-cv .project-item {
+  margin-bottom: 1rem;
+  page-break-inside: avoid;
+}
+
+.ats-friendly-cv ul {
+  list-style-type: disc;
+  margin-left: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.ats-friendly-cv ul li {
+  margin-bottom: 0.25rem;
+}
+
+/* Print-specific styles */
+@media print {
+  .ats-friendly-cv {
+    padding: 0;
+    margin: 0;
+    background: none;
+    font-size: 12pt;
+  }
+  
+  .ats-friendly-cv h1 {
+    font-size: 18pt;
+  }
+  
+  .ats-friendly-cv h2 {
+    font-size: 14pt;
+    border-bottom-color: #000;
+  }
+  
+  .ats-friendly-cv h3 {
+    font-size: 12pt;
+  }
+  
+  .ats-friendly-cv p,
+  .ats-friendly-cv .text-sm {
+    font-size: 10pt;
+    line-height: 1.4;
+  }
+  
+  .ats-friendly-cv .py-1,
+  .ats-friendly-cv .px-2 {
+    padding: 0 !important;
+  }
+  
+  .ats-friendly-cv .rounded-md {
+    border-radius: 0 !important;
+  }
+  
+  .ats-friendly-cv .bg-gray-100 {
+    background: none !important;
+    border: 1px solid #ddd !important;
+  }
+}
+
+/* Cover Letter styling */
+.ats-friendly-letter {
+  font-family: 'Times New Roman', Times, serif;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+}
+
+.ats-friendly-letter p {
+  margin-bottom: 1.25rem;
+}
+
+.ats-friendly-letter h1,
+.ats-friendly-letter h2,
+.ats-friendly-letter h3 {
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+@media print {
+  .ats-friendly-letter {
+    color: black !important;
+    background-color: white !important;
+    padding: 1in !important;
+    font-size: 12pt !important;
+  }
+
+  .ats-friendly-letter p {
+    margin-bottom: 1rem !important;
+    page-break-inside: avoid !important;
+    orphans: 3 !important;
+    widows: 3 !important;
+  }
+}
+
+/* Cover Letter specific spacing */
+.cover-letter-content p {
+  margin-bottom: 1rem;
+}
+
+.cover-letter-content .signature {
+  margin-top: 2rem;
+}
+
+/* Add spacing for cover letter paragraphs */
+.ats-friendly-letter .whitespace-pre-wrap {
+  white-space: pre-wrap;
+}
+
+/* Ensure proper spacing between paragraphs in all formats */
+.whitespace-pre-wrap p,
+.whitespace-pre-wrap div {
+  margin-bottom: 1rem;
 }
